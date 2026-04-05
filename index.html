@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FocusBuddy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --coffee: #76453B;
+      --espresso: #5C3630;
+      --mid-brown: #8B5E52;
+      --cream: #F8FAE5;
+      --caramel: #B19470;
+      --green: #43766C;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: fixed linear-gradient(
+        160deg,
+        #3D2520 0%,
+        #5C3630 15%,
+        #76453B 35%,
+        #8B5E52 50%,
+        #76453B 65%,
+        #5C3630 80%,
+        #3D2520 100%
+      );
+      background-size: cover;
+      color: #F8FAE5;
+      overflow-x: hidden;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .font-serif {
+      font-family: 'Instrument Serif', serif;
+      letter-spacing: -0.02em;
+    }
+
+    .glass-card {
+      background: rgba(248, 250, 229, 0.08);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(248, 250, 229, 0.1);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .glass-tile-tinted {
+      background: rgba(248, 250, 229, 0.06);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(248, 250, 229, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
+    }
+
+    /* SCROLL PERFORMANCE ENGINE */
+    body.is-scrolling .glass-card,
+    body.is-scrolling .glass-tile-tinted,
+    body.is-scrolling [class*="glass-"] {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      transition: none !important;
+    }
+
+    .adhd-card {
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      will-change: transform;
+      contain: content;
+    }
+
+    .adhd-card:hover {
+      transform: translateY(-4px) scale(1.02);
+      background: rgba(248, 250, 229, 0.12) !important;
+      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    .glass-button-primary {
+      background: #43766C;
+      color: #F8FAE5;
+      border: 1px solid rgba(67, 118, 108, 0.6);
+      box-shadow: 0 4px 20px rgba(67, 118, 108, 0.3);
+    }
+
+    .glass-button-primary:hover {
+      background: #4d8a7f;
+      box-shadow: 0 8px 30px rgba(67, 118, 108, 0.4);
+    }
+
+    @keyframes sparkle {
+      0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+      50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+    }
+    .animate-sparkle {
+      animation: sparkle 1.5s ease-in-out infinite;
+    }
+
+    @keyframes success-pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.04); background: rgba(67, 118, 108, 0.3); }
+      100% { transform: scale(1); }
+    }
+    .animate-success-pop {
+      animation: success-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes checkmark-draw {
+      0% { stroke-dashoffset: 24; opacity: 0; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+    .animate-check {
+      stroke-dasharray: 24;
+      animation: checkmark-draw 0.4s ease-out forwards;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(177, 148, 112, 0.3);
+      border-radius: 10px;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      background: rgba(248, 250, 229, 0.12) !important;
+      border-color: #43766C !important;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: rgba(177, 148, 112, 0.6);
+    }
+
+    /* Login screen specific */
+    .login-gradient {
+      background: linear-gradient(
+        160deg,
+        #3D2520 0%,
+        #5C3630 30%,
+        #76453B 60%,
+        #8B5E52 100%
+      );
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
