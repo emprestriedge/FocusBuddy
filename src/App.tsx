@@ -229,7 +229,7 @@ const App: React.FC = () => {
               <div className="space-y-2 md:space-y-3 flex-1 pr-4">
                 <div className="font-bold uppercase tracking-[0.3em] text-[9px] md:text-[10px]" style={{ color: COLORS.caramel }}>{todayDateDisplay}</div>
                 <h1 className="text-4xl md:text-7xl font-serif leading-tight" style={{ color: COLORS.cream }}>Hi Zaiden.</h1>
-                <div className="w-full max-w-md h-2 md:h-3 rounded-full overflow-hidden mt-2 md:mt-4" style={{ background: 'rgba(248, 250, 229, 0.08)' }}>
+                <div className="w-full max-w-md h-2 md:h-3 rounded-full overflow-hidden mt-2 md:mt-4" style={{ background: 'rgba(81, 55, 33, 0.45)' }}>
                   <div className="h-full transition-all duration-1000 ease-out rounded-full" style={{ width: `${progress}%`, background: `linear-gradient(to right, ${COLORS.green}, ${COLORS.caramel})` }} />
                 </div>
                 <p className="text-sm md:text-xl font-light tracking-wide mt-1 md:mt-2" style={{ color: COLORS.caramel }}>
@@ -280,7 +280,7 @@ const App: React.FC = () => {
                       className={`absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 rounded-full border flex items-center justify-center transition-all shrink-0 z-10 shadow-sm active:scale-90`}
                       style={task.completed
                         ? { backgroundColor: COLORS.green, color: COLORS.cream, borderColor: COLORS.green }
-                        : { background: 'rgba(248, 250, 229, 0.06)', borderColor: 'rgba(248, 250, 229, 0.1)', color: 'rgba(248, 250, 229, 0.2)' }
+                        : { background: 'rgba(81, 55, 33, 0.42)', borderColor: 'rgba(122, 99, 80, 0.30)', color: 'rgba(240, 226, 206, 0.3)' }
                       }
                     >
                       <div className="scale-90 md:scale-[1.2]">

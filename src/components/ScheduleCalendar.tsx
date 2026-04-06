@@ -36,18 +36,18 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ tasks, onSelectTask
 
   return (
     <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(248, 250, 229, 0.08)' }}>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
         <div className="space-y-2">
           <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Planning</div>
           <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>This Week.</h2>
         </div>
 
         <div className="flex items-center space-x-3 glass-card p-2 rounded-full self-start md:self-auto">
-          <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(248, 250, 229, 0.06)' }}>
+          <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(81, 55, 33, 0.42)' }}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <span className="px-4 py-2 font-bold text-[10px] uppercase tracking-widest" style={{ color: COLORS.cream }}>{weekLabel}</span>
-          <button onClick={() => setWeekOffset(w => w + 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(248, 250, 229, 0.06)' }}>
+          <button onClick={() => setWeekOffset(w => w + 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(81, 55, 33, 0.42)' }}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
           </button>
           {weekOffset !== 0 && (
@@ -88,7 +88,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ tasks, onSelectTask
                       className={`w-full flex items-center p-4 rounded-xl text-left adhd-card transition-all ${
                         task.id === lastCompletedTaskId ? 'animate-success-pop' : ''
                       }`}
-                      style={{ background: 'rgba(248, 250, 229, 0.04)' }}
+                      style={{ background: 'rgba(81, 55, 33, 0.30)' }}
                     >
                       <div className="flex-1 min-w-0">
                         <h4 className={`font-serif text-lg md:text-xl truncate ${task.completed ? 'line-through opacity-40' : ''}`} style={{ color: COLORS.cream }}>{task.name}</h4>
@@ -96,7 +96,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ tasks, onSelectTask
                       </div>
                       <div className={`ml-4 w-10 h-10 rounded-full border flex items-center justify-center shrink-0 transition-all ${
                         task.completed ? '' : 'opacity-30'
-                      }`} style={task.completed ? { backgroundColor: COLORS.green, color: COLORS.cream, borderColor: COLORS.green } : { borderColor: 'rgba(248, 250, 229, 0.15)', color: COLORS.caramel }}>
+                      }`} style={task.completed ? { backgroundColor: COLORS.green, color: COLORS.cream, borderColor: COLORS.green } : { borderColor: 'rgba(122, 99, 80, 0.35)', color: COLORS.caramel }}>
                         <div className="scale-75">
                           {task.id === lastCompletedTaskId ? (
                             <svg className="w-6 h-6 animate-check" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: COLORS.cream }}>

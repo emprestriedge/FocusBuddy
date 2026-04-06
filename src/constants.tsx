@@ -1,15 +1,15 @@
 import React from 'react';
 
 export const COLORS = {
-  green: '#43766C',      // Accent — buttons, active states, interactive elements
-  cream: '#F8FAE5',      // Light — text on dark, card surfaces
-  caramel: '#B19470',    // Warm secondary — borders, inactive states, progress
-  coffee: '#76453B',     // Dark base — backgrounds, primary dark
-  espresso: '#5C3630',   // Deeper dark — gradient endpoint
-  midBrown: '#8B5E52',   // Mid-tone — gradient midpoint
+  green: '#5DD3B6',      // Accent — buttons, active states (use sparingly)
+  cream: '#F0E2CE',      // Light — text on dark, warm off-white cream
+  caramel: '#C8C6A7',    // Secondary — subtitles, muted text
+  coffee: '#513721',     // Cool dark brown — cards, UI surfaces
+  espresso: '#3a2a1e',   // Deep cool brown — card borders
+  midBrown: '#7a6350',   // Cool mid brown — progress bars, secondary
   background: 'transparent',
-  glass: 'rgba(248, 250, 229, 0.12)',
-  glassTinted: 'rgba(248, 250, 229, 0.08)'
+  glass: 'rgba(81, 55, 33, 0.55)',
+  glassTinted: 'rgba(81, 55, 33, 0.42)'
 };
 
 export const Icons = {

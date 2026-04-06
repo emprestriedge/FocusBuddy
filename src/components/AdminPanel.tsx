@@ -210,7 +210,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
   return (
     <div className="space-y-10 max-w-7xl mx-auto animate-in fade-in duration-700 pb-20 px-1">
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: `1px solid rgba(248, 250, 229, 0.08)` }}>
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: `1px solid rgba(81, 55, 33, 0.45)` }}>
         <div className="space-y-3">
           <div className="font-bold uppercase tracking-[0.4em] text-[10px]" style={{ color: COLORS.caramel }}>Command Center</div>
           <h2 className="text-5xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Homework Planner.</h2>
@@ -232,7 +232,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
 
       {/* Week Navigation */}
       <div className="flex items-center justify-between">
-        <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(248, 250, 229, 0.06)' }}>
+        <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(81, 55, 33, 0.42)' }}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" /></svg>
         </button>
         <div className="text-center">
@@ -243,7 +243,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
             </button>
           )}
         </div>
-        <button onClick={() => setWeekOffset(w => w + 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(248, 250, 229, 0.06)' }}>
+        <button onClick={() => setWeekOffset(w => w + 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(81, 55, 33, 0.42)' }}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" /></svg>
         </button>
       </div>
@@ -271,7 +271,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
               {/* Tasks for this day */}
               <div className="space-y-2">
                 {dayTasks.map(task => (
-                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl group" style={{ background: 'rgba(248, 250, 229, 0.04)' }}>
+                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl group" style={{ background: 'rgba(81, 55, 33, 0.30)' }}>
                     <span className="text-lg" title={`Accountability: ${task.accountabilityType}`}>{accountabilityLabel(task.accountabilityType)}</span>
                     {editingTaskId === task.id ? (
                       <input
@@ -326,13 +326,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
                   onChange={(e) => setQuickAdds({ ...quickAdds, [date]: { ...qa, name: e.target.value } })}
                   onKeyDown={(e) => e.key === 'Enter' && handleQuickAdd(date)}
                   className="flex-1 px-4 py-3 rounded-xl font-serif text-lg border outline-none"
-                  style={{ background: 'rgba(248, 250, 229, 0.04)', borderColor: 'rgba(248, 250, 229, 0.08)', color: COLORS.cream }}
+                  style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
                 />
                 <select
                   value={qa.accountability}
                   onChange={(e) => setQuickAdds({ ...quickAdds, [date]: { ...qa, accountability: e.target.value as any } })}
                   className="px-3 py-3 rounded-xl text-[9px] font-bold uppercase tracking-wider border outline-none cursor-pointer"
-                  style={{ background: 'rgba(248, 250, 229, 0.04)', borderColor: 'rgba(248, 250, 229, 0.08)', color: COLORS.caramel }}
+                  style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.caramel }}
                 >
                   <option value="voice">🎤 Voice</option>
                   <option value="photo">📷 Photo</option>
@@ -361,7 +361,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
           <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>AI Planner</h3>
           <textarea
             className="w-full h-32 p-5 rounded-2xl font-serif text-lg resize-none shadow-inner outline-none border"
-            style={{ background: 'rgba(248, 250, 229, 0.04)', borderColor: 'rgba(248, 250, 229, 0.08)', color: COLORS.cream }}
+            style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
             placeholder="Describe a topic to auto-generate homework..."
             value={curriculumPrompt}
             onChange={(e) => setCurriculumPrompt(e.target.value)}
@@ -375,9 +375,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
             {loading ? 'Thinking...' : 'Generate Plan'}
           </button>
           {suggestedTasks.length > 0 && (
-            <div className="space-y-4 pt-4" style={{ borderTop: `1px solid rgba(248, 250, 229, 0.08)` }}>
+            <div className="space-y-4 pt-4" style={{ borderTop: `1px solid rgba(81, 55, 33, 0.45)` }}>
               {suggestedTasks.map((t, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: 'rgba(248, 250, 229, 0.04)' }}>
+                <div key={i} className="p-3 rounded-xl" style={{ background: 'rgba(81, 55, 33, 0.30)' }}>
                   <p className="font-serif text-lg" style={{ color: COLORS.cream }}>{t.name}</p>
                   <p className="text-sm" style={{ color: COLORS.caramel }}>{t.description}</p>
                 </div>
@@ -411,7 +411,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
               </p>
             ) : (
               activityFeed.map((entry) => (
-                <div key={entry.id} className="p-4 rounded-xl space-y-1" style={{ background: 'rgba(248, 250, 229, 0.04)' }}>
+                <div key={entry.id} className="p-4 rounded-xl space-y-1" style={{ background: 'rgba(81, 55, 33, 0.30)' }}>
                   <div className="flex items-center justify-between">
                     <p className="font-serif text-lg" style={{ color: COLORS.cream }}>{entry.taskName}</p>
                     <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>
@@ -437,7 +437,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
             <div className="p-2 rounded-xl shadow-sm" style={{ background: 'rgba(67, 118, 108, 0.15)' }}><Icons.Sparkles /></div>
             <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Learning Insight</h3>
           </div>
-          <div className="p-6 rounded-3xl font-serif text-lg leading-relaxed shadow-inner" style={{ background: 'rgba(248, 250, 229, 0.04)', color: COLORS.caramel }}>
+          <div className="p-6 rounded-3xl font-serif text-lg leading-relaxed shadow-inner" style={{ background: 'rgba(81, 55, 33, 0.30)', color: COLORS.caramel }}>
             "{aiInsight}"
           </div>
         </div>
@@ -448,7 +448,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
           <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed" style={{ color: COLORS.caramel }}>Import a CSV: date, name, description, accountability</p>
           <div
             className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all min-h-[120px]"
-            style={{ borderColor: 'rgba(248, 250, 229, 0.1)', background: 'rgba(248, 250, 229, 0.02)' }}
+            style={{ borderColor: 'rgba(122, 99, 80, 0.30)', background: 'rgba(81, 55, 33, 0.25)' }}
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="scale-125 opacity-40" style={{ color: COLORS.caramel }}><Icons.Portfolio /></div>
@@ -468,7 +468,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
       {/* Feedback Toast */}
       {feedback && (
         <div className="fixed bottom-12 left-1/2 -translate-x-1/2 px-10 py-4 rounded-full font-serif text-xl animate-in slide-in-from-bottom-6 duration-500 z-[100] shadow-2xl flex items-center space-x-4"
-          style={{ backgroundColor: COLORS.espresso, color: COLORS.cream, border: `1px solid rgba(248, 250, 229, 0.15)` }}>
+          style={{ backgroundColor: 'rgba(81, 55, 33, 0.85)', color: COLORS.cream, border: `1px solid rgba(122, 99, 80, 0.35)` }}>
           <Icons.Check />
           <span>{feedback}</span>
         </div>

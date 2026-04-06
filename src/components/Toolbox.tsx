@@ -3,8 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Icons, COLORS } from '../constants';
 import { VoiceNote, Task, GroundingSource } from '../types';
-import geminiService from '../services/geminiService';
-import storageService from '../services/storageService';
+import { geminiService } from '../services/geminiService';
+import { storageService } from '../services/storageService';
 
 interface ToolboxProps {
   onReturnToToday?: () => void;
@@ -157,7 +157,8 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
     setIsTranscribing(true);
 
     mediaRecorderRef.current?.stop();
-    mediaRecorderRef.current?.onstop = async () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.onstop = async () => {
       const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
       const reader = new FileReader();
 
@@ -176,6 +177,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
 
       reader.readAsDataURL(audioBlob);
     };
+    }
   };
 
   const saveVoiceNote = async (type: 'summary' | 'reflection' | 'assignment' | 'transcript') => {
@@ -402,69 +404,54 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: MAIN GRID ==========
   if (activeTool === 'none' && openFolder === 'none') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Toolbox
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Tools</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Toolbox.</h2>
+          </div>
+        </header>
 
         {/* Main Tools */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {/* Voice Note */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('voice')}
           >
             <div className="text-4xl mb-4">{Icons.Mic}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Voice Note
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Record and save
             </p>
           </div>
 
           {/* Master Builder */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('lego')}
           >
             <div className="text-4xl mb-4">{Icons.Lego}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Master Builder
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Build diagnostics
             </p>
           </div>
 
           {/* Word Wizard */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('vocab')}
           >
             <div className="text-4xl mb-4">{Icons.Vocabulary}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Word Wizard
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Words and origins
             </p>
           </div>
@@ -474,36 +461,28 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Study Tools Folder */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.caramel}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setOpenFolder('study')}
           >
             <div className="text-4xl mb-4">📁</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Study Tools
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               3 tools inside
             </p>
           </div>
 
           {/* Hands-On Folder */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.caramel}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setOpenFolder('handson')}
           >
             <div className="text-4xl mb-4">📁</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Hands-On
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               2 tools inside
             </p>
           </div>
@@ -515,79 +494,60 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: STUDY TOOLS FOLDER ==========
   if (openFolder === 'study') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setOpenFolder('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Study Tools
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Tools</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Study Tools.</h2>
+          </div>
+          <button
+            onClick={() => setOpenFolder('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Study Chat */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('chat')}
           >
             <div className="text-4xl mb-4">{Icons.Chat}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Study Chat
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Homework help
             </p>
           </div>
 
           {/* Researcher */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('search')}
           >
             <div className="text-4xl mb-4">{Icons.Search}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Researcher
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Fact checker
             </p>
           </div>
 
           {/* Visualizer */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('visualizer')}
           >
             <div className="text-4xl mb-4">{Icons.Visualizer}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Visualizer
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Diagrams and charts
             </p>
           </div>
@@ -599,61 +559,46 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: HANDS-ON FOLDER ==========
   if (openFolder === 'handson') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setOpenFolder('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Hands-On
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Tools</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Hands-On.</h2>
+          </div>
+          <button
+            onClick={() => setOpenFolder('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Photo Insight */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('photo')}
           >
             <div className="text-4xl mb-4">{Icons.Camera}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Photo Insight
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Analyze photos
             </p>
           </div>
 
           {/* Manual Lookup */}
           <div
-            className="adhd-card p-6 rounded-lg cursor-pointer transition-all"
-            style={{
-              backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              borderLeft: `4px solid ${COLORS.green}`,
-            }}
+            className="glass-tile-tinted adhd-card p-5 md:p-8 rounded-[2rem] cursor-pointer transition-all"
             onClick={() => setActiveTool('manual')}
           >
             <div className="text-4xl mb-4">{Icons.Manual}</div>
-            <h3 style={{ color: COLORS.cream }} className="font-bold text-lg">
+            <h3 style={{ color: COLORS.cream }} className="text-xl md:text-2xl font-serif">
               Manual Lookup
             </h3>
-            <p style={{ color: COLORS.caramel }} className="text-sm">
+            <p style={{ color: COLORS.caramel, opacity: 0.7 }} className="text-sm">
               Find instructions
             </p>
           </div>
@@ -665,28 +610,22 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: VOICE NOTE TOOL ==========
   if (activeTool === 'voice') {
     return (
-      <div
-        className="min-h-screen p-6 flex flex-col"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all w-fit"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24 flex flex-col">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Voice Note.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="flex-1 flex flex-col items-center justify-center">
-          <h2
-            className="text-3xl font-bold mb-8"
-            style={{ color: COLORS.cream }}
-          >
-            Voice Note
-          </h2>
 
           {!transcript ? (
             <div className="flex flex-col items-center gap-8">
@@ -719,7 +658,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                         key={note.id}
                         className="p-3 rounded-lg flex items-center justify-between"
                         style={{
-                          backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                          backgroundColor: 'rgba(81, 55, 33, 0.42)',
                         }}
                         onContextMenu={(e) => {
                           e.preventDefault();
@@ -746,12 +685,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
           ) : (
             <div className="w-full max-w-2xl">
               <div
-                className="p-6 rounded-lg mb-8"
-                style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
-                }}
+                className="glass-tile-tinted rounded-[2rem] p-5 md:p-8 mb-8"
               >
-                <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                   Review Draft
                 </h3>
                 <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -806,7 +742,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                 onClick={() => setTranscript('')}
                 className="w-full px-4 py-3 rounded-lg font-semibold transition-all"
                 style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                  backgroundColor: 'rgba(81, 55, 33, 0.42)',
                   color: COLORS.caramel,
                 }}
               >
@@ -822,27 +758,20 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: MASTER BUILDER TOOL ==========
   if (activeTool === 'lego') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Master Builder
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Master Builder.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl">
           {!builderResult ? (
@@ -851,7 +780,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               <div>
                 <label
                   style={{ color: COLORS.cream }}
-                  className="block font-bold mb-3"
+                  className="block font-serif mb-3"
                 >
                   Upload Photo
                 </label>
@@ -859,7 +788,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                   onClick={() => fileInputRef.current?.click()}
                   className="w-full px-6 py-4 rounded-lg font-semibold transition-all"
                   style={{
-                    backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                    backgroundColor: 'rgba(81, 55, 33, 0.42)',
                     color: COLORS.cream,
                     border: `2px solid ${COLORS.green}`,
                   }}
@@ -883,7 +812,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               <div>
                 <label
                   style={{ color: COLORS.cream }}
-                  className="block font-bold mb-3"
+                  className="block font-serif mb-3"
                 >
                   What's the problem?
                 </label>
@@ -893,7 +822,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                   placeholder="Describe the issue or what you want to analyze..."
                   className="w-full px-4 py-3 rounded-lg font-light focus:outline-none"
                   style={{
-                    backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                    backgroundColor: 'rgba(81, 55, 33, 0.42)',
                     color: COLORS.cream,
                   }}
                   rows={4}
@@ -915,12 +844,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
           ) : (
             <div className="space-y-6">
               <div
-                className="p-6 rounded-lg"
-                style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
-                }}
+                className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
               >
-                <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                   Diagnosis
                 </h3>
                 <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -947,7 +873,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                   }}
                   className="flex-1 px-6 py-3 rounded-lg font-bold transition-all"
                   style={{
-                    backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                    backgroundColor: 'rgba(81, 55, 33, 0.42)',
                     color: COLORS.caramel,
                   }}
                 >
@@ -964,33 +890,26 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: WORD WIZARD TOOL ==========
   if (activeTool === 'vocab') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Word Wizard
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Word Wizard.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl space-y-6">
           <div>
             <label
               style={{ color: COLORS.cream }}
-              className="block font-bold mb-3"
+              className="block font-serif mb-3"
             >
               What word?
             </label>
@@ -1001,7 +920,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               placeholder="Enter a word..."
               className="w-full px-4 py-3 rounded-lg focus:outline-none"
               style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                backgroundColor: 'rgba(81, 55, 33, 0.42)',
                 color: COLORS.cream,
               }}
             />
@@ -1021,12 +940,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
 
           {vocabResult && (
             <div
-              className="p-6 rounded-lg"
-              style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              }}
+              className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
             >
-              <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+              <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                 Word Info
               </h3>
               <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -1042,33 +958,26 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: STUDY CHAT TOOL ==========
   if (activeTool === 'chat') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Study Chat
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Study Chat.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl space-y-6">
           <div>
             <label
               style={{ color: COLORS.cream }}
-              className="block font-bold mb-3"
+              className="block font-serif mb-3"
             >
               Your Question
             </label>
@@ -1078,7 +987,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               placeholder="Ask anything about your homework..."
               className="w-full px-4 py-3 rounded-lg focus:outline-none"
               style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                backgroundColor: 'rgba(81, 55, 33, 0.42)',
                 color: COLORS.cream,
               }}
               rows={4}
@@ -1123,12 +1032,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
 
           {chatResult && (
             <div
-              className="p-6 rounded-lg"
-              style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
-              }}
+              className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
             >
-              <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+              <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                 Response
               </h3>
               <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -1144,33 +1050,26 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: RESEARCHER TOOL ==========
   if (activeTool === 'search') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Researcher
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Researcher.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl space-y-6">
           <div>
             <label
               style={{ color: COLORS.cream }}
-              className="block font-bold mb-3"
+              className="block font-serif mb-3"
             >
               What do you want to research?
             </label>
@@ -1181,7 +1080,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               placeholder="Search for facts..."
               className="w-full px-4 py-3 rounded-lg focus:outline-none"
               style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                backgroundColor: 'rgba(81, 55, 33, 0.42)',
                 color: COLORS.cream,
               }}
             />
@@ -1202,12 +1101,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
           {searchResult && (
             <div className="space-y-6">
               <div
-                className="p-6 rounded-lg"
-                style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
-                }}
+                className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
               >
-                <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                   Findings
                 </h3>
                 <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -1217,7 +1113,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
 
               {searchSources.length > 0 && (
                 <div>
-                  <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                  <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                     Sources
                   </h3>
                   <div className="flex flex-wrap gap-2">
@@ -1249,33 +1145,26 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: VISUALIZER TOOL ==========
   if (activeTool === 'visualizer') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Visualizer
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Visualizer.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl space-y-6">
           <div>
             <label
               style={{ color: COLORS.cream }}
-              className="block font-bold mb-3"
+              className="block font-serif mb-3"
             >
               What do you want to visualize?
             </label>
@@ -1286,7 +1175,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               placeholder="Enter a concept, process, or idea..."
               className="w-full px-4 py-3 rounded-lg focus:outline-none"
               style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                backgroundColor: 'rgba(81, 55, 33, 0.42)',
                 color: COLORS.cream,
               }}
             />
@@ -1337,12 +1226,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               />
               {vizText && (
                 <div
-                  className="p-6 rounded-lg"
-                  style={{
-                    backgroundColor: 'rgba(248, 250, 229, 0.06)',
-                  }}
+                  className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
                 >
-                  <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                  <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                     Explanation
                   </h3>
                   <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -1358,7 +1244,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                 }}
                 className="w-full px-6 py-3 rounded-lg font-bold transition-all"
                 style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                  backgroundColor: 'rgba(81, 55, 33, 0.42)',
                   color: COLORS.caramel,
                 }}
               >
@@ -1374,35 +1260,28 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: PHOTO INSIGHT TOOL ==========
   if (activeTool === 'photo') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Photo Insight
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Photo Insight.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl space-y-6">
           {!photoImage ? (
             <button
               onClick={() => photoInputRef.current?.click()}
-              className="w-full px-6 py-12 rounded-lg font-bold text-lg transition-all"
+              className="w-full px-6 py-12 rounded-[2rem] font-bold text-lg transition-all"
               style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                backgroundColor: 'rgba(81, 55, 33, 0.42)',
                 color: COLORS.cream,
                 border: `2px dashed ${COLORS.green}`,
               }}
@@ -1414,13 +1293,13 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               <img
                 src={photoImage}
                 alt="Selected"
-                className="w-full rounded-lg"
+                className="w-full rounded-[2rem]"
               />
 
               <div>
                 <label
                   style={{ color: COLORS.cream }}
-                  className="block font-bold mb-3"
+                  className="block font-serif mb-3"
                 >
                   Choose Mode
                 </label>
@@ -1436,7 +1315,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                       onClick={() => setPhotoMode(mode.value)}
                       className="px-4 py-3 rounded-lg font-bold text-sm transition-all"
                       style={{
-                        backgroundColor: photoMode === mode.value ? COLORS.green : 'rgba(248, 250, 229, 0.06)',
+                        backgroundColor: photoMode === mode.value ? COLORS.green : 'rgba(81, 55, 33, 0.42)',
                         color: COLORS.cream,
                       }}
                     >
@@ -1466,7 +1345,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                   }}
                   className="w-full px-6 py-3 rounded-lg font-bold transition-all"
                   style={{
-                    backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                    backgroundColor: 'rgba(81, 55, 33, 0.42)',
                     color: COLORS.caramel,
                   }}
                 >
@@ -1479,12 +1358,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
           {photoResult && (
             <div className="space-y-6">
               <div
-                className="p-6 rounded-lg"
-                style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
-                }}
+                className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
               >
-                <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                   Analysis
                 </h3>
                 <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -1510,7 +1386,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
                   }}
                   className="flex-1 px-6 py-3 rounded-lg font-bold transition-all"
                   style={{
-                    backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                    backgroundColor: 'rgba(81, 55, 33, 0.42)',
                     color: COLORS.caramel,
                   }}
                 >
@@ -1540,33 +1416,26 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
   // ========== RENDER: MANUAL LOOKUP TOOL ==========
   if (activeTool === 'manual') {
     return (
-      <div
-        className="min-h-screen p-6"
-        style={{ backgroundColor: COLORS.espresso }}
-      >
-        <button
-          onClick={() => setActiveTool('none')}
-          className="mb-6 px-4 py-2 rounded-lg transition-all"
-          style={{
-            backgroundColor: COLORS.green,
-            color: COLORS.cream,
-          }}
-        >
-          ← Back
-        </button>
-
-        <h2
-          className="text-2xl font-bold mb-8"
-          style={{ color: COLORS.cream }}
-        >
-          Manual Lookup
-        </h2>
+      <div className="space-y-8 md:space-y-12 animate-in fade-in duration-700 pb-24">
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-8" style={{ borderBottom: '1px solid rgba(81, 55, 33, 0.45)' }}>
+          <div className="space-y-2">
+            <div className="font-bold uppercase tracking-[0.4em] text-[9px]" style={{ color: COLORS.caramel }}>Toolbox</div>
+            <h2 className="text-4xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Manual Lookup.</h2>
+          </div>
+          <button
+            onClick={() => setActiveTool('none')}
+            className="px-5 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+            style={{ backgroundColor: COLORS.green, color: '#1e2830' }}
+          >
+            ← Back
+          </button>
+        </header>
 
         <div className="max-w-2xl space-y-6">
           <div>
             <label
               style={{ color: COLORS.cream }}
-              className="block font-bold mb-3"
+              className="block font-serif mb-3"
             >
               What instructions do you need?
             </label>
@@ -1577,7 +1446,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
               placeholder="Search for instructions or guides..."
               className="w-full px-4 py-3 rounded-lg focus:outline-none"
               style={{
-                backgroundColor: 'rgba(248, 250, 229, 0.06)',
+                backgroundColor: 'rgba(81, 55, 33, 0.42)',
                 color: COLORS.cream,
               }}
             />
@@ -1598,12 +1467,9 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
           {manualResult && (
             <div className="space-y-6">
               <div
-                className="p-6 rounded-lg"
-                style={{
-                  backgroundColor: 'rgba(248, 250, 229, 0.06)',
-                }}
+                className="glass-tile-tinted rounded-[2rem] p-5 md:p-8"
               >
-                <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                   Instructions
                 </h3>
                 <p style={{ color: COLORS.cream }} className="leading-relaxed">
@@ -1613,7 +1479,7 @@ const Toolbox: React.FC<ToolboxProps> = ({ onReturnToToday, onTasksUpdated }) =>
 
               {manualSources.length > 0 && (
                 <div>
-                  <h3 style={{ color: COLORS.cream }} className="font-bold mb-3">
+                  <h3 style={{ color: COLORS.cream }} className="font-serif mb-3">
                     Source Links
                   </h3>
                   <div className="flex flex-wrap gap-2">

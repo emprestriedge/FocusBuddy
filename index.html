@@ -9,28 +9,28 @@
   <style>
     :root {
       color-scheme: dark;
-      --coffee: #76453B;
-      --espresso: #5C3630;
-      --mid-brown: #8B5E52;
-      --cream: #F8FAE5;
-      --caramel: #B19470;
-      --green: #43766C;
+      --coffee: #5e4423;
+      --espresso: #241508;
+      --mid-brown: #3a2306;
+      --cream: #F0E2CE;
+      --caramel: #C8C6A7;
+      --green: #5DD3B6;
     }
 
     body {
       font-family: 'Inter', sans-serif;
       background: fixed linear-gradient(
         160deg,
-        #3D2520 0%,
-        #5C3630 15%,
-        #76453B 35%,
-        #8B5E52 50%,
-        #76453B 65%,
-        #5C3630 80%,
-        #3D2520 100%
+        #1e2830 0%,
+        #2a3540 15%,
+        #435560 35%,
+        #6E7C7C 50%,
+        #435560 65%,
+        #2a3540 80%,
+        #1e2830 100%
       );
       background-size: cover;
-      color: #F8FAE5;
+      color: #F0E2CE;
       overflow-x: hidden;
       min-height: 100vh;
       -webkit-font-smoothing: antialiased;
@@ -42,19 +42,19 @@
     }
 
     .glass-card {
-      background: rgba(248, 250, 229, 0.08);
+      background: rgba(81, 55, 33, 0.55);
       backdrop-filter: blur(28px) saturate(180%);
       -webkit-backdrop-filter: blur(28px) saturate(180%);
-      border: 1px solid rgba(248, 250, 229, 0.1);
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.15);
+      border: 1px solid rgba(122, 99, 80, 0.30);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
     }
 
     .glass-tile-tinted {
-      background: rgba(248, 250, 229, 0.06);
+      background: rgba(81, 55, 33, 0.42);
       backdrop-filter: blur(28px) saturate(180%);
       -webkit-backdrop-filter: blur(28px) saturate(180%);
-      border: 1px solid rgba(248, 250, 229, 0.08);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(122, 99, 80, 0.22);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.22);
     }
 
     /* SCROLL PERFORMANCE ENGINE */
@@ -74,20 +74,20 @@
 
     .adhd-card:hover {
       transform: translateY(-4px) scale(1.02);
-      background: rgba(248, 250, 229, 0.12) !important;
-      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.25);
+      background: rgba(81, 55, 33, 0.50) !important;
+      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.35);
     }
 
     .glass-button-primary {
-      background: #43766C;
-      color: #F8FAE5;
-      border: 1px solid rgba(67, 118, 108, 0.6);
-      box-shadow: 0 4px 20px rgba(67, 118, 108, 0.3);
+      background: #5DD3B6;
+      color: #241508;
+      border: 1px solid rgba(93, 211, 182, 0.6);
+      box-shadow: 0 4px 20px rgba(93, 211, 182, 0.3);
     }
 
     .glass-button-primary:hover {
-      background: #4d8a7f;
-      box-shadow: 0 8px 30px rgba(67, 118, 108, 0.4);
+      background: #6EDCC2;
+      box-shadow: 0 8px 30px rgba(93, 211, 182, 0.4);
     }
 
     @keyframes sparkle {
@@ -100,7 +100,7 @@
 
     @keyframes success-pop {
       0% { transform: scale(1); }
-      50% { transform: scale(1.04); background: rgba(67, 118, 108, 0.3); }
+      50% { transform: scale(1.04); background: rgba(93, 211, 182, 0.3); }
       100% { transform: scale(1); }
     }
     .animate-success-pop {
@@ -119,28 +119,28 @@
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-      background: rgba(177, 148, 112, 0.3);
+      background: rgba(122, 99, 80, 0.4);
       border-radius: 10px;
     }
 
     input:focus, textarea:focus {
       outline: none;
-      background: rgba(248, 250, 229, 0.12) !important;
-      border-color: #43766C !important;
+      background: rgba(81, 55, 33, 0.25) !important;
+      border-color: #5DD3B6 !important;
     }
 
     input::placeholder, textarea::placeholder {
-      color: rgba(177, 148, 112, 0.6);
+      color: rgba(200, 198, 167, 0.5);
     }
 
     /* Login screen specific */
     .login-gradient {
       background: linear-gradient(
         160deg,
-        #3D2520 0%,
-        #5C3630 30%,
-        #76453B 60%,
-        #8B5E52 100%
+        #2a3540 0%,
+        #435560 30%,
+        #513721 60%,
+        #435560 100%
       );
     }
   </style>

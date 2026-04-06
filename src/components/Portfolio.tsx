@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Heart, Search, Star, Trash2 } from 'lucide-react';
 import { Task } from '../types';
 import { COLORS, Icons } from '../constants';
-import storageService from '../services/storageService';
+import { storageService } from '../services/storageService';
 
 interface PortfolioProps {
   tasks: Task[];
@@ -283,7 +283,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
   const hasMoreToLoad = filteredTasks.length > displayedCount;
 
   return (
-    <div className="w-full min-h-screen" style={{ backgroundColor: COLORS.espresso }}>
+    <div className="w-full min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-40 backdrop-blur-sm bg-gradient-to-b from-black/40 to-transparent">
         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">

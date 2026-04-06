@@ -85,7 +85,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full px-6 py-4 rounded-2xl font-serif text-lg border"
-                style={{ background: 'rgba(248, 250, 229, 0.08)', borderColor: 'rgba(248, 250, 229, 0.1)', color: COLORS.cream }}
+                style={{ background: 'rgba(81, 55, 33, 0.45)', borderColor: 'rgba(122, 99, 80, 0.30)', color: COLORS.cream }}
               />
               <div className="flex gap-3">
                 <button
@@ -97,8 +97,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       : 'opacity-60 hover:opacity-100'
                   }`}
                   style={{
-                    background: role === 'student' ? COLORS.green : 'rgba(248, 250, 229, 0.06)',
-                    borderColor: role === 'student' ? COLORS.green : 'rgba(248, 250, 229, 0.1)',
+                    background: role === 'student' ? COLORS.green : 'rgba(81, 55, 33, 0.42)',
+                    borderColor: role === 'student' ? COLORS.green : 'rgba(122, 99, 80, 0.30)',
                     color: COLORS.cream
                   }}
                 >
@@ -113,8 +113,8 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                       : 'opacity-60 hover:opacity-100'
                   }`}
                   style={{
-                    background: role === 'parent' ? COLORS.green : 'rgba(248, 250, 229, 0.06)',
-                    borderColor: role === 'parent' ? COLORS.green : 'rgba(248, 250, 229, 0.1)',
+                    background: role === 'parent' ? COLORS.green : 'rgba(81, 55, 33, 0.42)',
+                    borderColor: role === 'parent' ? COLORS.green : 'rgba(122, 99, 80, 0.30)',
                     color: COLORS.cream
                   }}
                 >
@@ -131,7 +131,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
             className="w-full px-6 py-4 rounded-2xl font-serif text-lg border"
-            style={{ background: 'rgba(248, 250, 229, 0.08)', borderColor: 'rgba(248, 250, 229, 0.1)', color: COLORS.cream }}
+            style={{ background: 'rgba(81, 55, 33, 0.45)', borderColor: 'rgba(122, 99, 80, 0.30)', color: COLORS.cream }}
           />
           <input
             type="password"
@@ -141,7 +141,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             className="w-full px-6 py-4 rounded-2xl font-serif text-lg border"
-            style={{ background: 'rgba(248, 250, 229, 0.08)', borderColor: 'rgba(248, 250, 229, 0.1)', color: COLORS.cream }}
+            style={{ background: 'rgba(81, 55, 33, 0.45)', borderColor: 'rgba(122, 99, 80, 0.30)', color: COLORS.cream }}
           />
 
           <button

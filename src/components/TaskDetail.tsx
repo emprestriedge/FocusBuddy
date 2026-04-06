@@ -134,7 +134,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,0.3)' }} onClick={() => setShowPicker(false)}>
           <div className="glass-card w-full max-w-xs rounded-[2rem] p-8 space-y-4 animate-in zoom-in duration-300 shadow-2xl" onClick={e => e.stopPropagation()}>
             <button onClick={() => { cameraInputRef.current?.click(); setShowPicker(false); }} className="w-full py-5 rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] hover:scale-105 transition-transform" style={{ backgroundColor: COLORS.green, color: COLORS.cream }}>Take Photo</button>
-            <button onClick={() => { galleryInputRef.current?.click(); setShowPicker(false); }} className="w-full py-5 glass-tile-tinted rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] hover:scale-105 transition-transform border" style={{ color: COLORS.cream, borderColor: 'rgba(248, 250, 229, 0.1)' }}>Choose from Library</button>
+            <button onClick={() => { galleryInputRef.current?.click(); setShowPicker(false); }} className="w-full py-5 glass-tile-tinted rounded-2xl font-bold text-[10px] uppercase tracking-[0.2em] hover:scale-105 transition-transform border" style={{ color: COLORS.cream, borderColor: 'rgba(122, 99, 80, 0.30)' }}>Choose from Library</button>
             <button onClick={() => setShowPicker(false)} className="w-full py-3 font-bold text-[8px] uppercase tracking-widest" style={{ color: COLORS.caramel }}>Cancel</button>
           </div>
         </div>
@@ -144,7 +144,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
       <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
 
       <div className="glass-card w-full max-w-2xl rounded-[2.5rem] overflow-hidden relative animate-in slide-in-from-bottom-8 duration-500 shadow-2xl">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full transition-all z-10" style={{ background: 'rgba(248, 250, 229, 0.1)', color: COLORS.cream }}>
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 rounded-full transition-all z-10" style={{ background: 'rgba(122, 99, 80, 0.30)', color: COLORS.cream }}>
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
 
@@ -174,13 +174,13 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
                         </button>
                       </div>
                     ) : (
-                      <button onClick={() => setShowPicker(true)} className="w-full py-14 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center transition-all group" style={{ borderColor: 'rgba(248, 250, 229, 0.1)', color: COLORS.caramel }}>
+                      <button onClick={() => setShowPicker(true)} className="w-full py-14 border-2 border-dashed rounded-[2rem] flex flex-col items-center justify-center transition-all group" style={{ borderColor: 'rgba(122, 99, 80, 0.30)', color: COLORS.caramel }}>
                         <div className="scale-150 mb-6 group-hover:scale-110 transition-transform"><Icons.Camera /></div>
                         <span className="text-[10px] font-bold uppercase tracking-[0.3em]">Tap to Add Proof</span>
                       </button>
                     )}
                     <div className="flex items-center space-x-3 px-2">
-                      <input type="checkbox" id="saveToGallery" checked={saveToGallery} onChange={(e) => setSaveToGallery(e.target.checked)} className="w-4 h-4 rounded accent-[#43766C]" />
+                      <input type="checkbox" id="saveToGallery" checked={saveToGallery} onChange={(e) => setSaveToGallery(e.target.checked)} className="w-4 h-4 rounded accent-[#5DD3B6]" />
                       <label htmlFor="saveToGallery" className="text-[10px] font-bold uppercase tracking-widest cursor-pointer select-none" style={{ color: COLORS.caramel }}>Save to Gallery</label>
                     </div>
                   </div>
@@ -200,7 +200,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
                         onChange={(e) => setReflection(e.target.value)}
                         placeholder={isRecording ? "Listening..." : "Tell me what you learned..."}
                         className="w-full h-40 p-6 rounded-[2rem] font-serif text-xl resize-none leading-relaxed overflow-y-auto border outline-none"
-                        style={{ background: 'rgba(248, 250, 229, 0.06)', borderColor: 'rgba(248, 250, 229, 0.08)', color: COLORS.cream }}
+                        style={{ background: 'rgba(81, 55, 33, 0.42)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
                       />
                       {isTranscribing && (
                         <div className="absolute inset-0 rounded-[2rem] flex items-center justify-center" style={{ background: 'rgba(60, 37, 32, 0.3)', backdropFilter: 'blur(2px)' }}>
@@ -220,7 +220,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
                     ) : prompts.length > 0 && (
                       <div className="flex flex-wrap gap-2 px-2">
                         {prompts.map((p, idx) => (
-                          <button key={idx} onClick={() => setReflection(prev => prev ? `${prev} ${p}` : p)} className="px-4 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all border" style={{ background: 'rgba(248, 250, 229, 0.06)', borderColor: 'rgba(248, 250, 229, 0.1)', color: COLORS.caramel }}>
+                          <button key={idx} onClick={() => setReflection(prev => prev ? `${prev} ${p}` : p)} className="px-4 py-2 rounded-full text-[9px] font-bold uppercase tracking-widest transition-all border" style={{ background: 'rgba(81, 55, 33, 0.42)', borderColor: 'rgba(122, 99, 80, 0.30)', color: COLORS.caramel }}>
                             {p}
                           </button>
                         ))}
@@ -253,7 +253,7 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
                   </div>
                 )}
                 {task.reflectionText && (
-                  <div className="p-8 rounded-[2.5rem] font-serif text-2xl leading-relaxed shadow-inner" style={{ background: 'rgba(248, 250, 229, 0.06)', color: COLORS.caramel }}>
+                  <div className="p-8 rounded-[2.5rem] font-serif text-2xl leading-relaxed shadow-inner" style={{ background: 'rgba(81, 55, 33, 0.42)', color: COLORS.caramel }}>
                     "{task.reflectionText}"
                   </div>
                 )}

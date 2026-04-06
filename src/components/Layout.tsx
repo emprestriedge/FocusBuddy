@@ -52,7 +52,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentMode, setMode, userRol
               currentMode === item.mode
                 ? 'shadow-lg scale-110'
                 : 'hover:bg-white/5'
-            }`} style={currentMode === item.mode ? { backgroundColor: 'rgba(248, 250, 229, 0.1)' } : {}}>
+            }`} style={currentMode === item.mode ? { backgroundColor: 'rgba(122, 99, 80, 0.30)' } : {}}>
               <item.icon />
             </div>
             <span className="text-[8px] font-bold uppercase tracking-[0.25em]">{item.label}</span>
@@ -97,7 +97,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentMode, setMode, userRol
           >
             <div className={`p-1.5 rounded-xl transition-all ${
               currentMode === item.mode ? 'shadow-md' : 'bg-transparent'
-            }`} style={currentMode === item.mode ? { backgroundColor: 'rgba(248, 250, 229, 0.1)' } : {}}>
+            }`} style={currentMode === item.mode ? { backgroundColor: 'rgba(122, 99, 80, 0.30)' } : {}}>
               <div className="scale-95">
                 <item.icon />
               </div>
