@@ -28,15 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentMode, setMode, userRol
   return (
     <div className="min-h-screen flex flex-col pb-28 md:pb-0 md:pl-32">
       {/* Desktop Sidebar */}
-      <nav className="hidden md:flex fixed left-6 top-6 bottom-6 w-24 glass-card rounded-[2.5rem] flex-col items-center py-10 space-y-10 z-50">
-        <div
-          className="w-12 h-12 rounded-full flex items-center justify-center mb-4 shadow-sm cursor-pointer hover:scale-110 transition-transform"
-          style={{ backgroundColor: COLORS.green }}
-          onClick={() => setMode(userRole === 'parent' ? AppMode.ADMIN : AppMode.STUDENT)}
-        >
-          <div style={{ color: COLORS.cream }}><Icons.Sparkles /></div>
-        </div>
-
+      <nav className="hidden md:flex fixed left-6 top-6 bottom-6 w-24 glass-card rounded-[2.5rem] flex-col items-center py-8 space-y-8 z-50">
         {navItems.map((item) => (
           <button
             key={item.mode}
@@ -63,10 +55,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentMode, setMode, userRol
         <div className="flex-1" />
         <button
           onClick={onLogout}
-          className="flex flex-col items-center space-y-2 opacity-40 hover:opacity-100 transition-all"
+          className="flex flex-col items-center space-y-2 opacity-70 hover:opacity-100 transition-all"
           style={{ color: COLORS.caramel }}
         >
-          <div className="p-3.5 rounded-2xl hover:bg-white/5">
+          <div className="p-3.5 rounded-2xl hover:bg-white/10 transition-colors">
             <Icons.LogOut />
           </div>
           <span className="text-[8px] font-bold uppercase tracking-[0.25em]">Log Out</span>

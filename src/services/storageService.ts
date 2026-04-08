@@ -1,6 +1,6 @@
 import { Task, VoiceNote, ActivityEntry, UserProfile } from '../types';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, orderBy, limit, addDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, orderBy, limit, addDoc, where, getDocs } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
 
 const STORAGE_KEY = 'focusbuddy_tasks_v1';
@@ -162,6 +162,25 @@ export const storageService = {
       await setDoc(doc(db, 'focusbuddy_users', studentUid), { linkedTo: parentUid }, { merge: true });
     } catch (error) {
       console.error("Link error:", error);
+    }
+  },
+
+  findStudentByEmail: async (email: string): Promise<{ uid: string; profile: UserProfile } | null> => {
+    try {
+      const q = query(
+        collection(db, 'focusbuddy_users'),
+        where('email', '==', email.trim().toLowerCase()),
+        where('role', '==', 'student')
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const docSnap = snapshot.docs[0];
+        return { uid: docSnap.id, profile: docSnap.data() as UserProfile };
+      }
+      return null;
+    } catch (error) {
+      console.error("Find student error:", error);
+      return null;
     }
   },
 

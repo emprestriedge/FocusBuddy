@@ -209,7 +209,14 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (mode) {
       case AppMode.ADMIN:
-        return <AdminPanel onTasksUpdated={handleTasksUpdated} studentUid={studentUid} />;
+        return <AdminPanel
+          onTasksUpdated={handleTasksUpdated}
+          studentUid={studentUid}
+          parentUid={authUser?.uid}
+          onLinked={(newStudentUid) => {
+            setUserProfile(prev => prev ? { ...prev, linkedTo: newStudentUid } : prev);
+          }}
+        />;
       case AppMode.PORTFOLIO:
         return <Portfolio tasks={tasks} onTasksUpdated={handleTasksUpdated} />;
       case AppMode.TOOLBOX:
@@ -224,7 +231,7 @@ const App: React.FC = () => {
         const progress = allTodayTasks.length > 0 ? (allTodayTasks.filter(t => t.completed).length / allTodayTasks.length) * 100 : 0;
 
         return (
-          <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <div className="space-y-6 md:space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-700 max-w-4xl">
             <header className="flex justify-between items-start">
               <div className="space-y-2 md:space-y-3 flex-1 pr-4">
                 <div className="font-bold uppercase tracking-[0.3em] text-[9px] md:text-[10px]" style={{ color: COLORS.caramel }}>{todayDateDisplay}</div>

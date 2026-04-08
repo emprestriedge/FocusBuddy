@@ -7,17 +7,22 @@ import { COLORS, Icons } from '../constants';
 interface AdminPanelProps {
   onTasksUpdated: (tasks: Task[]) => void;
   studentUid?: string;
+  parentUid?: string;
+  onLinked?: (studentUid: string) => void;
 }
 
 type SyncState = 'idle' | 'syncing' | 'synced' | 'failed';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, parentUid, onLinked }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [curriculumPrompt, setCurriculumPrompt] = useState('');
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
+  const [linkEmail, setLinkEmail] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
+  const [linkError, setLinkError] = useState('');
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [aiInsight, setAiInsight] = useState('');
   const [suggestedTasks, setSuggestedTasks] = useState<any[]>([]);
@@ -73,6 +78,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
       return () => unsub();
     }
   }, [studentUid]);
+
+  const handleLinkStudent = async () => {
+    if (!linkEmail.trim() || !parentUid) return;
+    setLinkLoading(true);
+    setLinkError('');
+    try {
+      const result = await storageService.findStudentByEmail(linkEmail);
+      if (!result) {
+        setLinkError("No student account found with that email.");
+        setLinkLoading(false);
+        return;
+      }
+      await storageService.linkParentStudent(parentUid, result.uid);
+      onLinked?.(result.uid);
+      setLinkEmail('');
+      setFeedback(`Linked to ${result.profile.name}!`);
+    } catch (err: any) {
+      setLinkError(err.message || "Something went wrong.");
+    }
+    setLinkLoading(false);
+  };
 
   useEffect(() => {
     if (feedback) {
@@ -230,6 +256,38 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
         </div>
       </header>
 
+      {/* Link Student Account */}
+      {!studentUid && (
+        <div className="glass-tile-tinted rounded-[2rem] p-6 md:p-8 space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Link Student Account</h3>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>Enter your student's email to connect accounts and enable syncing.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="email"
+              placeholder="Student's email..."
+              value={linkEmail}
+              onChange={(e) => setLinkEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLinkStudent()}
+              className="flex-1 px-4 py-3 rounded-xl font-serif text-lg border outline-none"
+              style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+            />
+            <button
+              onClick={handleLinkStudent}
+              disabled={linkLoading || !linkEmail.trim()}
+              className="px-6 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-all hover:scale-105 disabled:opacity-30"
+              style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+            >
+              {linkLoading ? 'Linking...' : 'Link'}
+            </button>
+          </div>
+          {linkError && (
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#EF4444' }}>{linkError}</p>
+          )}
+        </div>
+      )}
+
       {/* Week Navigation */}
       <div className="flex items-center justify-between">
         <button onClick={() => setWeekOffset(w => w - 1)} className="p-3 rounded-full transition-all active:scale-95" style={{ color: COLORS.caramel, background: 'rgba(81, 55, 33, 0.42)' }}>
@@ -257,7 +315,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid }) =
           const qa = quickAdds[date] || { name: '', accountability: 'voice' };
 
           return (
-            <div key={date} className={`glass-tile-tinted rounded-[2rem] p-6 md:p-8 space-y-4 ${isToday ? 'ring-2' : ''}`} style={isToday ? { ringColor: COLORS.green } : {}}>
+            <div key={date} className="glass-tile-tinted rounded-[2rem] p-6 md:p-8 space-y-4" style={isToday ? { boxShadow: `inset 0 0 0 2px ${COLORS.green}` } : {}}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h3 className="text-2xl font-serif" style={{ color: COLORS.cream }}>{day}</h3>

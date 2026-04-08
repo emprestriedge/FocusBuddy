@@ -64,7 +64,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ tasks, onSelectTask
           const completedCount = dayTasks.filter(t => t.completed).length;
 
           return (
-            <div key={date} className={`glass-tile-tinted rounded-[2rem] p-5 md:p-8 space-y-4 ${isToday ? 'ring-2' : ''}`} style={isToday ? { ringColor: COLORS.green } : {}}>
+            <div key={date} className="glass-tile-tinted rounded-[2rem] p-5 md:p-8 space-y-4" style={isToday ? { boxShadow: `inset 0 0 0 2px ${COLORS.green}` } : {}}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl md:text-2xl font-serif" style={{ color: COLORS.cream }}>{day}</h3>

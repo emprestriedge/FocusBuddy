@@ -17,8 +17,10 @@ export interface Task {
 
 export interface VoiceNote {
   id: string;
-  text: string;
-  timestamp: string;
+  date: string;
+  transcript: string;
+  processedType: 'summary' | 'reflection' | 'assignment' | 'transcript';
+  processedText: string;
 }
 
 export interface ActivityEntry {
@@ -49,5 +51,5 @@ export interface UserProfile {
   email: string;
   role: 'parent' | 'student';
   createdAt: string;
-  linkedTo?: string; // UID of linked parent/student
+  linkedTo?: string;
 }

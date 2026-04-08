@@ -288,10 +288,10 @@ export const Portfolio: React.FC<PortfolioProps> = ({
       <div className="sticky top-0 z-40 backdrop-blur-sm bg-gradient-to-b from-black/40 to-transparent">
         <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
           <h1
-            className="text-3xl sm:text-4xl font-bold mb-6"
+            className="text-4xl md:text-7xl font-serif mb-6"
             style={{ color: COLORS.cream }}
           >
-            Portfolio
+            Gallery.
           </h1>
 
           {/* Search bar */}
