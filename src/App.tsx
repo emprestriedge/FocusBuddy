@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { AppMode, Task, UserProfile, ActivityEntry } from './types';
+import { AppMode, Task, UserProfile, ActivityEntry, StarData } from './types';
 import { storageService } from './services/storageService';
 import Layout from './components/Layout';
 import Login from './components/Login';
@@ -8,7 +8,7 @@ import AdminPanel from './components/AdminPanel';
 import Portfolio from './components/Portfolio';
 import ScheduleCalendar from './components/ScheduleCalendar';
 import Toolbox from './components/Toolbox';
-import { Icons, COLORS } from './constants';
+import { Icons, COLORS, toLocalDateString } from './constants';
 import { User } from 'firebase/auth';
 
 const App: React.FC = () => {
@@ -17,24 +17,54 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Diagnostic: sync status for debugging cross-device sync issues
+  const [syncStatus, setSyncStatus] = useState<string>('idle');
+
   // App state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
   const [mode, setMode] = useState<AppMode>(AppMode.STUDENT);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [showStarShop, setShowStarShop] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationMessage, setCelebrationMessage] = useState('Plus 1 Star!');
   const [lastCompletedTaskId, setLastCompletedTaskId] = useState<string | null>(null);
-  const [stars, setStars] = useState<number>(() => {
-    return parseInt(localStorage.getItem('focusbuddy_stars') || '0');
-  });
+  const [starData, setStarData] = useState<StarData>(() => storageService.getStarData());
 
-  // Listen for auth state changes
+  // Listen for auth state changes and configure cloud sync target
   useEffect(() => {
     const unsub = storageService.onAuthStateChanged(async (user) => {
+      console.log('[FB-SYNC] Auth state changed. User:', user?.uid || 'null', 'email:', user?.email);
       setAuthUser(user);
       if (user) {
+        setSyncStatus('loading profile...');
         const profile = await storageService.getUserProfile(user.uid);
+        console.log('[FB-SYNC] Profile loaded:', profile);
         setUserProfile(profile);
+
+        if (!profile) {
+          console.error('[FB-SYNC] No profile doc found for UID:', user.uid);
+          setSyncStatus('no profile found');
+        }
+
+        // Determine the student UID for cloud sync
+        // Parent → use linkedTo (the student's UID)
+        // Student → use own UID
+        const targetStudentUid = profile?.role === 'parent'
+          ? profile.linkedTo
+          : user.uid;
+
+        console.log('[FB-SYNC] Target student UID:', targetStudentUid, 'role:', profile?.role);
+
+        if (targetStudentUid) {
+          storageService.setCloudTarget(targetStudentUid);
+          // Migrate old data if needed (one-time)
+          await storageService.migrateToSharedPath(targetStudentUid);
+        } else {
+          console.error('[FB-SYNC] No target student UID — parent missing linkedTo?');
+          setSyncStatus('not linked to student');
+        }
+
         if (profile?.role === 'parent') {
           setMode(AppMode.ADMIN);
         } else {
@@ -59,12 +89,12 @@ const App: React.FC = () => {
     initStorage();
   }, []);
 
-  // Persist stars
+  // Sync star data after hydration
   useEffect(() => {
     if (isHydrated) {
-      localStorage.setItem('focusbuddy_stars', stars.toString());
+      setStarData(storageService.getStarData());
     }
-  }, [stars, isHydrated]);
+  }, [isHydrated]);
 
   // Scroll to top on mode change
   useEffect(() => {
@@ -94,38 +124,76 @@ const App: React.FC = () => {
     };
   }, []);
 
-  // Subscribe to cloud updates (student listens to their own schedule)
-  useEffect(() => {
-    if (isHydrated && authUser && userProfile?.role === 'student') {
-      const unsubscribe = storageService.subscribeToCloud(authUser.uid, (updatedTasks) => {
-        setTasks(updatedTasks);
-      });
-      return () => unsubscribe();
-    }
-  }, [authUser, userProfile, isHydrated]);
-
-  // If parent, subscribe to linked student's schedule for the activity feed
-  // The studentUid would come from userProfile.linkedTo
+  // Subscribe to cloud updates — ALL accounts (parent AND student) listen
+  // to the same shared schedule under the student's UID
   const studentUid = userProfile?.role === 'parent' ? userProfile.linkedTo : authUser?.uid;
+
+  useEffect(() => {
+    if (!isHydrated || !studentUid) return;
+
+    console.log('[FB-SYNC] Pulling from cloud for student UID:', studentUid);
+    setSyncStatus('pulling schedule...');
+
+    // Pull latest from cloud first, then subscribe for real-time updates
+    storageService.pullFromCloud(studentUid).then((cloudTasks) => {
+      console.log('[FB-SYNC] Pull succeeded. Tasks found:', cloudTasks.length);
+      setSyncStatus(`loaded ${cloudTasks.length} tasks`);
+      if (cloudTasks.length > 0) {
+        setTasks(cloudTasks);
+      }
+    }).catch((err) => {
+      console.error('[FB-SYNC] Pull from cloud failed:', err);
+      setSyncStatus(`sync failed: ${err?.message || err}`);
+    });
+
+    const unsubscribe = storageService.subscribeToCloud(studentUid, (updatedTasks) => {
+      console.log('[FB-SYNC] Real-time update received. Tasks:', updatedTasks.length);
+      setTasks(updatedTasks);
+    });
+
+    // Pull & subscribe to stars
+    storageService.pullStarsFromCloud(studentUid).then((cloudStars) => {
+      if (cloudStars) setStarData(cloudStars);
+    });
+    const unsubStars = storageService.subscribeToStars(studentUid, (updatedStars) => {
+      setStarData(updatedStars);
+    });
+
+    return () => { unsubscribe(); unsubStars(); };
+  }, [studentUid, isHydrated]);
 
   const handleTasksUpdated = useCallback((updatedTasks: Task[]) => {
     setTasks(updatedTasks);
   }, []);
 
+  // Helper: get Monday date string for a given date
+  const getMondayOfWeek = useCallback((dateStr: string) => {
+    const d = new Date(dateStr + 'T12:00:00');
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    return toLocalDateString(monday);
+  }, []);
+
   const handleToggleTaskStatus = useCallback((id: string, photoUrl: string, reflection: string, showInGallery: boolean) => {
     let celebrationTriggered = false;
+    let bonusMessages: string[] = [];
 
     const updatedTasks = storageService.getTasks().map(t => {
       if (t.id === id) {
         const isTurningComplete = !t.completed;
         if (isTurningComplete) {
-          celebrationTriggered = true;
-          setLastCompletedTaskId(id);
-          setStars(prev => prev + 1);
-          setTimeout(() => setLastCompletedTaskId(null), 3000);
+          // Award task star (only if not already earned)
+          const earned = storageService.earnTaskStar(id);
+          if (earned) {
+            celebrationTriggered = true;
+            setLastCompletedTaskId(id);
+            setTimeout(() => setLastCompletedTaskId(null), 3000);
+          }
 
-          // Log activity
-          if (authUser) {
+          // Log activity under the student's shared path
+          const targetUid = storageService.getCloudTarget() || authUser?.uid;
+          if (targetUid) {
             const entry: ActivityEntry = {
               id: Math.random().toString(36).substr(2, 9),
               taskId: id,
@@ -135,8 +203,11 @@ const App: React.FC = () => {
               hasVoiceNote: !!reflection,
               voiceSummary: reflection ? reflection.substring(0, 200) : undefined
             };
-            storageService.logActivity(authUser.uid, entry);
+            storageService.logActivity(targetUid, entry);
           }
+        } else {
+          // Un-completing: remove the star
+          storageService.removeTaskStar(id);
         }
         return {
           ...t,
@@ -154,11 +225,48 @@ const App: React.FC = () => {
     storageService.saveTasks(updatedTasks);
     setSelectedTask(null);
 
-    if (celebrationTriggered) {
+    // Check for daily bonus: all tasks for this task's date completed
+    const thisTask = updatedTasks.find(t => t.id === id);
+    if (thisTask?.completed && thisTask.date) {
+      const dayTasks = updatedTasks.filter(t => t.date === thisTask.date);
+      if (dayTasks.length > 0 && dayTasks.every(t => t.completed)) {
+        const dailyEarned = storageService.earnDailyBonus(thisTask.date);
+        if (dailyEarned) {
+          bonusMessages.push('Daily Bonus! +1 Star');
+        }
+
+        // Check for weekly bonus: all 5 weekdays completed
+        const monday = getMondayOfWeek(thisTask.date);
+        const DAYS_OFFSETS = [0, 1, 2, 3, 4];
+        const weekDates = DAYS_OFFSETS.map(offset => {
+          const d = new Date(monday + 'T12:00:00');
+          d.setDate(d.getDate() + offset);
+          return toLocalDateString(d);
+        });
+
+        const allWeekComplete = weekDates.every(date => {
+          const dayTasks = updatedTasks.filter(t => t.date === date);
+          return dayTasks.length > 0 && dayTasks.every(t => t.completed);
+        });
+
+        if (allWeekComplete) {
+          const weeklyEarned = storageService.earnWeeklyBonus(monday);
+          if (weeklyEarned) {
+            bonusMessages.push('FULL WEEK! +5 Stars!');
+          }
+        }
+      }
+    }
+
+    // Refresh star data for UI
+    setStarData({ ...storageService.getStarData() });
+
+    if (celebrationTriggered || bonusMessages.length > 0) {
+      setCelebrationMessage(bonusMessages.length > 0 ? bonusMessages.join('\n') : 'Plus 1 Star!');
       setShowCelebration(true);
       setTimeout(() => setShowCelebration(false), 4000);
     }
-  }, [authUser]);
+  }, [authUser, getMondayOfWeek]);
 
   const handleLogout = async () => {
     try {
@@ -213,7 +321,11 @@ const App: React.FC = () => {
           onTasksUpdated={handleTasksUpdated}
           studentUid={studentUid}
           parentUid={authUser?.uid}
+          starData={starData}
+          onStarDataChanged={() => setStarData({ ...storageService.getStarData() })}
           onLinked={(newStudentUid) => {
+            storageService.setCloudTarget(newStudentUid);
+            storageService.migrateToSharedPath(newStudentUid);
             setUserProfile(prev => prev ? { ...prev, linkedTo: newStudentUid } : prev);
           }}
         />;
@@ -225,7 +337,7 @@ const App: React.FC = () => {
         return <ScheduleCalendar tasks={tasks} onSelectTask={setSelectedTask} lastCompletedTaskId={lastCompletedTaskId} />;
       case AppMode.STUDENT:
       default:
-        const today = new Date().toISOString().split('T')[0];
+        const today = toLocalDateString();
         const todayTasks = tasks.filter(t => t.date === today && !t.completed);
         const allTodayTasks = tasks.filter(t => t.date === today);
         const progress = allTodayTasks.length > 0 ? (allTodayTasks.filter(t => t.completed).length / allTodayTasks.length) * 100 : 0;
@@ -244,10 +356,13 @@ const App: React.FC = () => {
                 </p>
               </div>
               <div className="flex flex-col items-end space-y-3 md:space-y-4">
-                <div className="flex items-center space-x-2 md:space-x-3 glass-card px-4 py-2 md:px-6 md:py-2.5 rounded-full">
+                <button
+                  onClick={() => setShowStarShop(true)}
+                  className="flex items-center space-x-2 md:space-x-3 glass-card px-4 py-2 md:px-6 md:py-2.5 rounded-full transition-all active:scale-95 hover:scale-105"
+                >
                   <span className="text-xl md:text-2xl">⭐</span>
-                  <span className="font-serif text-lg md:text-2xl" style={{ color: COLORS.cream }}>{stars}</span>
-                </div>
+                  <span className="font-serif text-lg md:text-2xl" style={{ color: COLORS.cream }}>{starData.total}</span>
+                </button>
               </div>
             </header>
 
@@ -263,7 +378,7 @@ const App: React.FC = () => {
               <div className="glass-tile-tinted rounded-[2rem] p-12 text-center animate-in fade-in zoom-in duration-700">
                 <h2 className="text-3xl font-serif" style={{ color: COLORS.cream }}>Done and Dusted.</h2>
                 <button onClick={() => setMode(AppMode.PORTFOLIO)} className="mt-8 px-8 py-3 rounded-full font-bold text-[10px] uppercase tracking-[0.2em]" style={{ backgroundColor: COLORS.green, color: COLORS.cream }}>
-                  Go to Gallery
+                  Go to Library
                 </button>
               </div>
             ) : (
@@ -311,9 +426,105 @@ const App: React.FC = () => {
 
   return (
     <Layout currentMode={mode} setMode={setMode} userRole={userProfile?.role || 'student'} onLogout={handleLogout}>
+      {/* DIAGNOSTIC: Sync status banner - remove once cross-device sync is confirmed working */}
+      {syncStatus !== 'idle' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          padding: '6px 12px',
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          textAlign: 'center',
+          backgroundColor: syncStatus.startsWith('sync failed') || syncStatus === 'no profile found' || syncStatus === 'not linked to student'
+            ? 'rgba(220, 38, 38, 0.92)'
+            : syncStatus.startsWith('loaded')
+            ? 'rgba(34, 139, 107, 0.92)'
+            : 'rgba(81, 55, 33, 0.92)',
+          color: '#F0E2CE',
+          letterSpacing: '0.05em'
+        }}>
+          SYNC: {syncStatus} {authUser?.email ? `| ${authUser.email}` : ''} {studentUid ? `| student: ${studentUid.substring(0, 8)}...` : ''}
+        </div>
+      )}
+
       {renderContent()}
 
       {selectedTask && <TaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} onToggleComplete={handleToggleTaskStatus} />}
+
+      {/* Star Shop Modal */}
+      {showStarShop && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8">
+          <div className="absolute inset-0 backdrop-blur-xl" style={{ background: 'rgba(60, 37, 32, 0.6)' }} onClick={() => setShowStarShop(false)} />
+          <div className="glass-card w-full max-w-lg rounded-[2.5rem] overflow-hidden relative animate-in slide-in-from-bottom-8 duration-500 shadow-2xl">
+            <button onClick={() => setShowStarShop(false)} className="absolute top-6 right-6 p-2 rounded-full transition-all z-10" style={{ background: 'rgba(122, 99, 80, 0.30)', color: COLORS.cream }}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div className="p-8 md:p-12 space-y-8 max-h-[85vh] overflow-y-auto">
+              <header className="text-center space-y-3">
+                <div className="text-6xl">⭐</div>
+                <h2 className="text-4xl font-serif" style={{ color: COLORS.cream }}>{starData.total} Stars</h2>
+                <p className="text-sm" style={{ color: COLORS.caramel }}>Spend your stars on rewards!</p>
+              </header>
+
+              {starData.rewards.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="font-serif text-lg" style={{ color: COLORS.caramel }}>No rewards available yet.</p>
+                  <p className="text-sm mt-2" style={{ color: COLORS.caramel, opacity: 0.6 }}>Ask your parent to set some up!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {starData.rewards.map(reward => {
+                    const canAfford = starData.total >= reward.cost;
+                    return (
+                      <div key={reward.id} className="flex items-center gap-4 p-5 rounded-2xl" style={{ background: 'rgba(81, 55, 33, 0.42)' }}>
+                        <span className="text-3xl">{reward.emoji}</span>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-serif text-lg truncate" style={{ color: COLORS.cream }}>{reward.name}</h3>
+                          <p className="text-sm" style={{ color: COLORS.caramel }}>⭐ {reward.cost}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (storageService.redeemReward(reward)) {
+                              setStarData({ ...storageService.getStarData() });
+                              setCelebrationMessage(`${reward.emoji} ${reward.name} unlocked!`);
+                              setShowStarShop(false);
+                              setShowCelebration(true);
+                              setTimeout(() => setShowCelebration(false), 4000);
+                            }
+                          }}
+                          disabled={!canAfford}
+                          className="px-5 py-2 rounded-full font-bold text-[10px] uppercase tracking-widest transition-all disabled:opacity-30"
+                          style={{ backgroundColor: canAfford ? COLORS.green : 'rgba(81, 55, 33, 0.42)', color: canAfford ? '#1e2830' : COLORS.caramel }}
+                        >
+                          {canAfford ? 'Get It!' : 'Need More'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Recent redemptions */}
+              {starData.redemptions.length > 0 && (
+                <div className="space-y-3 pt-4" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.45)' }}>
+                  <h3 className="text-sm font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>Rewards History</h3>
+                  {starData.redemptions.slice(-5).reverse().map(r => (
+                    <div key={r.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(81, 55, 33, 0.25)' }}>
+                      <span className="font-serif text-sm" style={{ color: COLORS.cream }}>{r.rewardName}</span>
+                      <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>
+                        {new Date(r.redeemedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Celebration */}
       {showCelebration && (
@@ -321,7 +532,9 @@ const App: React.FC = () => {
           <div className="absolute inset-0 animate-in fade-in duration-1000" style={{ background: 'rgba(60, 37, 32, 0.4)', backdropFilter: 'blur(10px)' }}></div>
           <div className="relative flex flex-col items-center animate-in zoom-in-50 duration-700">
             <div className="text-[12rem] animate-bounce">⭐</div>
-            <h2 className="text-5xl font-serif" style={{ color: COLORS.cream }}>Plus 1 Star!</h2>
+            {celebrationMessage.split('\n').map((line, i) => (
+              <h2 key={i} className="text-4xl md:text-5xl font-serif text-center" style={{ color: COLORS.cream }}>{line}</h2>
+            ))}
           </div>
         </div>
       )}

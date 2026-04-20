@@ -52,4 +52,31 @@ export interface UserProfile {
   role: 'parent' | 'student';
   createdAt: string;
   linkedTo?: string;
+  linkedStudents?: string[];
+  linkedParents?: string[];
+}
+
+export interface StarReward {
+  id: string;
+  name: string;
+  cost: number;
+  emoji: string;
+  createdAt: string;
+}
+
+export interface StarRedemption {
+  id: string;
+  rewardId: string;
+  rewardName: string;
+  cost: number;
+  redeemedAt: string;
+}
+
+export interface StarData {
+  total: number;
+  earnedTaskIds: string[];
+  dailyBonusDates: string[];
+  weeklyBonusWeeks: string[];
+  rewards: StarReward[];
+  redemptions: StarRedemption[];
 }

@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
-import { Task, ActivityEntry } from '../types';
-import { COLORS, Icons } from '../constants';
+import { Task, ActivityEntry, StarData, StarReward } from '../types';
+import { COLORS, Icons, toLocalDateString } from '../constants';
 
 interface AdminPanelProps {
   onTasksUpdated: (tasks: Task[]) => void;
   studentUid?: string;
   parentUid?: string;
+  starData?: StarData;
+  onStarDataChanged?: () => void;
   onLinked?: (studentUid: string) => void;
 }
 
@@ -15,7 +17,9 @@ type SyncState = 'idle' | 'syncing' | 'synced' | 'failed';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, parentUid, onLinked }) => {
+const REWARD_EMOJIS = ['🎮', '🍕', '🎬', '🏀', '🎯', '🎨', '🎵', '🛒', '🍦', '🎁', '📱', '🎪'];
+
+const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, parentUid, starData, onStarDataChanged, onLinked }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [curriculumPrompt, setCurriculumPrompt] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -29,6 +33,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
 
+  // Reward shop state
+  const [newRewardName, setNewRewardName] = useState('');
+  const [newRewardCost, setNewRewardCost] = useState('');
+  const [newRewardEmoji, setNewRewardEmoji] = useState('🎮');
+
   // Week navigation
   const [weekOffset, setWeekOffset] = useState(0);
 
@@ -39,7 +48,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
     return DAYS.map((day, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalDateString(d);
     });
   };
 
@@ -118,6 +127,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
         setSyncState('failed');
         return;
       }
+      // Push to the shared student path
       await storageService.pushToCloud(studentUid, allTasks);
       setSyncState('synced');
       setTimeout(() => setSyncState('idle'), 3000);
@@ -127,6 +137,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
       setTimeout(() => setSyncState('idle'), 5000);
     }
   };
+
+  // Show sync status indicator
+  const cloudEnabled = storageService.isCloudEnabled();
 
   const handleAiTaskGen = async () => {
     if (!curriculumPrompt.trim()) return;
@@ -242,6 +255,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
           <h2 className="text-5xl md:text-7xl font-serif leading-none" style={{ color: COLORS.cream }}>Homework Planner.</h2>
         </div>
         <div className="flex items-center gap-4">
+          {cloudEnabled && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full" style={{ background: 'rgba(93, 211, 182, 0.12)' }}>
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: COLORS.green }}></div>
+              <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.green }}>Live Sync</span>
+            </div>
+          )}
           <button
             onClick={handleCloudSync}
             disabled={syncState === 'syncing' || !studentUid}
@@ -251,7 +270,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
               color: COLORS.cream
             }}
           >
-            {syncState === 'syncing' ? 'Syncing...' : syncState === 'synced' ? <><Icons.Check /><span>Synced!</span></> : 'Push to Zaiden'}
+            {syncState === 'syncing' ? 'Syncing...' : syncState === 'synced' ? <><Icons.Check /><span>Synced!</span></> : cloudEnabled ? 'Force Sync' : 'Push to Zaiden'}
           </button>
         </div>
       </header>
@@ -311,7 +330,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
         {DAYS.map((day, dayIndex) => {
           const date = weekDates[dayIndex];
           const dayTasks = tasks.filter(t => t.date === date);
-          const isToday = date === new Date().toISOString().split('T')[0];
+          const isToday = date === toLocalDateString();
           const qa = quickAdds[date] || { name: '', accountability: 'voice' };
 
           return (
@@ -409,6 +428,113 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
             </div>
           );
         })}
+      </div>
+
+      {/* Star Shop Manager */}
+      <div className="glass-tile-tinted rounded-[2.5rem] p-6 md:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⭐</span>
+            <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Star Shop</h3>
+          </div>
+          {starData && (
+            <span className="font-serif text-lg" style={{ color: COLORS.green }}>
+              {starData.total} stars earned
+            </span>
+          )}
+        </div>
+
+        <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed" style={{ color: COLORS.caramel }}>
+          Set up rewards Zaiden can spend stars on. 1 star per task, +1 bonus for finishing a day, +5 for a full week.
+        </p>
+
+        {/* Existing rewards */}
+        {starData && starData.rewards.length > 0 && (
+          <div className="space-y-2">
+            {starData.rewards.map(reward => (
+              <div key={reward.id} className="flex items-center gap-3 p-4 rounded-xl group" style={{ background: 'rgba(81, 55, 33, 0.30)' }}>
+                <span className="text-2xl">{reward.emoji}</span>
+                <span className="flex-1 font-serif text-lg" style={{ color: COLORS.cream }}>{reward.name}</span>
+                <span className="font-bold text-sm" style={{ color: COLORS.green }}>⭐ {reward.cost}</span>
+                <button
+                  onClick={() => { storageService.deleteReward(reward.id); onStarDataChanged?.(); }}
+                  className="p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
+                  style={{ color: '#EF4444' }}
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add new reward */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {REWARD_EMOJIS.map(e => (
+              <button key={e} onClick={() => setNewRewardEmoji(e)}
+                className="w-10 h-10 rounded-xl text-xl flex items-center justify-center transition-all"
+                style={{ background: newRewardEmoji === e ? COLORS.green : 'rgba(81, 55, 33, 0.42)', opacity: newRewardEmoji === e ? 1 : 0.6 }}>
+                {e}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              placeholder="Reward name..."
+              value={newRewardName}
+              onChange={(e) => setNewRewardName(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-xl font-serif text-lg border outline-none"
+              style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+            />
+            <input
+              type="number"
+              placeholder="Cost"
+              value={newRewardCost}
+              onChange={(e) => setNewRewardCost(e.target.value)}
+              className="w-24 px-4 py-3 rounded-xl font-serif text-lg border outline-none text-center"
+              style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+            />
+            <button
+              onClick={() => {
+                if (!newRewardName.trim() || !newRewardCost) return;
+                const reward: StarReward = {
+                  id: Math.random().toString(36).slice(2),
+                  name: newRewardName.trim(),
+                  cost: parseInt(newRewardCost) || 10,
+                  emoji: newRewardEmoji,
+                  createdAt: new Date().toISOString()
+                };
+                storageService.addReward(reward);
+                onStarDataChanged?.();
+                setNewRewardName('');
+                setNewRewardCost('');
+                setFeedback(`Added reward: ${reward.emoji} ${reward.name}`);
+              }}
+              disabled={!newRewardName.trim() || !newRewardCost}
+              className="px-6 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-all hover:scale-105 disabled:opacity-30"
+              style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+            >
+              Add
+            </button>
+          </div>
+        </div>
+
+        {/* Recent redemptions */}
+        {starData && starData.redemptions.length > 0 && (
+          <div className="space-y-2 pt-4" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.45)' }}>
+            <h4 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>Recent Redemptions</h4>
+            {starData.redemptions.slice(-5).reverse().map(r => (
+              <div key={r.id} className="flex items-center justify-between p-3 rounded-xl" style={{ background: 'rgba(81, 55, 33, 0.25)' }}>
+                <span className="font-serif text-sm" style={{ color: COLORS.cream }}>{r.rewardName} (⭐{r.cost})</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: COLORS.green }}>
+                  {new Date(r.redeemedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Sidebar: AI Planner + Activity Feed + Insight */}
