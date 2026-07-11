@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FocusBuddy</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --coffee: #5e4423;
+      --espresso: #241508;
+      --mid-brown: #3a2306;
+      --cream: #F0E2CE;
+      --caramel: #C8C6A7;
+      --green: #5DD3B6;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: fixed linear-gradient(
+        160deg,
+        #1e2830 0%,
+        #2a3540 15%,
+        #435560 35%,
+        #6E7C7C 50%,
+        #435560 65%,
+        #2a3540 80%,
+        #1e2830 100%
+      );
+      background-size: cover;
+      color: #F0E2CE;
+      overflow-x: hidden;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .font-serif {
+      font-family: 'Instrument Serif', serif;
+      letter-spacing: -0.02em;
+    }
+
+    .glass-card {
+      background: rgba(81, 55, 33, 0.55);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(122, 99, 80, 0.30);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .glass-tile-tinted {
+      background: rgba(81, 55, 33, 0.42);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid rgba(122, 99, 80, 0.22);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.22);
+    }
+
+    /* SCROLL PERFORMANCE ENGINE */
+    body.is-scrolling .glass-card,
+    body.is-scrolling .glass-tile-tinted,
+    body.is-scrolling [class*="glass-"] {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      transition: none !important;
+    }
+
+    .adhd-card {
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      will-change: transform;
+      contain: content;
+    }
+
+    @media (hover: hover) {
+      .adhd-card:hover {
+        transform: translateY(-4px) scale(1.02);
+        background: rgba(81, 55, 33, 0.50) !important;
+        box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.35);
+      }
+
+      .glass-button-primary:hover {
+        background: #6EDCC2;
+        box-shadow: 0 8px 30px rgba(93, 211, 182, 0.4);
+      }
+    }
+
+    .glass-button-primary {
+      background: #5DD3B6;
+      color: #241508;
+      border: 1px solid rgba(93, 211, 182, 0.6);
+      box-shadow: 0 4px 20px rgba(93, 211, 182, 0.3);
+    }
+
+    @keyframes sparkle {
+      0%, 100% { transform: scale(0) rotate(0deg); opacity: 0; }
+      50% { transform: scale(1.2) rotate(180deg); opacity: 1; }
+    }
+    .animate-sparkle {
+      animation: sparkle 1.5s ease-in-out infinite;
+    }
+
+    @keyframes success-pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.04); background: rgba(93, 211, 182, 0.3); }
+      100% { transform: scale(1); }
+    }
+    .animate-success-pop {
+      animation: success-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes checkmark-draw {
+      0% { stroke-dashoffset: 24; opacity: 0; }
+      100% { stroke-dashoffset: 0; opacity: 1; }
+    }
+    .animate-check {
+      stroke-dasharray: 24;
+      animation: checkmark-draw 0.4s ease-out forwards;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(122, 99, 80, 0.4);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(122, 99, 80, 0.6);
+    }
+
+    ::selection {
+      background: rgba(93, 211, 182, 0.25);
+      color: #F0E2CE;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      background: rgba(81, 55, 33, 0.25) !important;
+      border-color: #5DD3B6 !important;
+    }
+
+    input::placeholder, textarea::placeholder {
+      color: rgba(200, 198, 167, 0.5);
+    }
+
+    /* Login screen specific */
+    .login-gradient {
+      background: linear-gradient(
+        160deg,
+        #2a3540 0%,
+        #435560 30%,
+        #513721 60%,
+        #435560 100%
+      );
+    }
+  </style>
+  <!-- home-screen app icon (added 2026-06-15) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

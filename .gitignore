@@ -1,0 +1,10 @@
+node_modules/
+.netlify/
+.DS_Store
+.env
+.env.local
+*.p8
+
+# built bundles excluded from public repo (baked-in API key)
+Deploy/
+dist/
