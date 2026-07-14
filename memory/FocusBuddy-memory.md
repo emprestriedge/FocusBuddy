@@ -1,3 +1,9 @@
+> **2026-07-13 Netlify + GitHub verification (current status):** FocusBuddy is finished and being used/tested by Zaiden. Netlify site `focusbuddy-v3` current deploy `6a305e99299667434884efc4` is ready, published 2026-06-15, and its production `index.html` matches local `Deploy/index.html` byte-for-byte. GitHub's default and only remote branch is verified as `cowork-2026-07-11` at `c259467`; its source matches the current local working files apart from the hardened ignore rules and updated memory. A local tracking branch was added without switching or overwriting files. The checked-out `v3-rebuild` branch is historical and its remote was deleted. Do not push that legacy working branch wholesale.
+
+> **2026-07-11 FINAL (branch cleanup):** Old branches deleted from GitHub per Erin ("wrap it up"). Recovery SHAs if ever needed (GitHub can restore a branch from a SHA): `main` = 9a87fcd9f1268bbade092cc6f8ab95695c424083 (last commit 2026-04-15) · `v3-rebuild` = 3334d9e08ebfc84cb2cfd016e994e00230a90c3b (last commit 2026-04-15). Repo now has ONE branch: `cowork-2026-07-11` (default) = current v3 from local working copy, with hardened .gitignore included. Remaining human-only task: rotate the old exposed Gemini key at Google.
+
+> **2026-07-11 UPDATE (later same session):** Erin confirmed: **Netlify = source of truth, v3 = the current version.** Local working copy pushed to GitHub branch `cowork-2026-07-11` (now the repo's **default branch**; `main` and `v3-rebuild` left untouched for reference — safe to delete once verified). Built bundles (Deploy/dist) were EXCLUDED from the push because the repo is public and they bake in the Gemini key. The Firebase web config key in src is fine to be public (protected by Firestore rules). Old branches can be cleaned up in a future session.
+
 > **2026-07-11 snapshot (pre-migration cleanup):** Live at focusbuddy-v3.netlify.app — status: in revisions/debugging. Memory consolidated here (moved from central memory; old Apr-22 copy → Trash/OldMemory). ⚠️ GitHub: repo `FocusBuddy` exists (public) with a PRIORITY branch-untangling task (main vs v3-rebuild vs local vs Netlify) — do NOT push blindly; see Next Steps at bottom. Local `.env` holds secrets — keep out of git.
 
 # FocusBuddy v3 — Project Memory
@@ -7,7 +13,7 @@ Homeschool homework app for Zaiden (10, ADHD). React + Vite + TypeScript + Fireb
 
 ## Links
 - **Live**: https://focusbuddy-v3.netlify.app
-- **GitHub**: emprestriedge/FocusBuddy (branch: v3-rebuild)
+- **GitHub**: emprestriedge/FocusBuddy (verified backup/default branch: `cowork-2026-07-11`)
 - **Netlify Site ID**: 6e7b2118-0f67-4965-ab12-709e2ba3fc20
 - **Local**: ~/cowork/VibeCoding/FocusBuddy (Erin renamed the folder from FocusBuddy-v3, 2026-06-12; app/branch/site names still say v3)
 
