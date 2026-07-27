@@ -1,6 +1,6 @@
 import { GoogleGenAI, GenerateContentResponse, Type, Modality, LiveServerMessage } from "@google/genai";
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCtZCK5NX-tqg53BqETynbXCZmrNlpCoJg';
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const STUDENT_CONTEXT = `The student is a 10-year-old boy doing homeschool. He has ADHD, so keep responses concise (2-4 short paragraphs max), use concrete examples over abstract explanations, and break complex ideas into small numbered steps. Avoid walls of text. Use a friendly, encouraging tone — like a cool older brother who knows a lot.`;
 
@@ -8,15 +8,36 @@ const SAFETY_PREAMBLE = `You are helping a child. Never provide inappropriate, v
 
 export const geminiService = {
 
-  // ==================== FACT CHECK (NEW — Grounding with Google Search) ====================
-  async factCheck(claim: string) {
+  // ==================== GROUNDED SEARCH (direct REST API — SDK browser build has issues with grounding) ====================
+  async groundedQuery(query: string, systemInstruction: string) {
     try {
-      const ai = new GoogleGenAI({ apiKey: API_KEY });
-      const response: GenerateContentResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: claim,
-        config: {
-          systemInstruction: `${SAFETY_PREAMBLE} You are a fact-checker for a 10-year-old homeschool student. ${STUDENT_CONTEXT}
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: 'user', parts: [{ text: query }] }],
+          tools: [{ google_search: {} }],
+          generationConfig: { thinkingConfig: { thinkingBudget: 0 } }
+        })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message);
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const text = parts.filter((p: any) => p.text && !p.thought).map((p: any) => p.text).join('\n');
+      const sources = data.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((c: any) => ({
+        title: c.web?.title || 'Source', uri: c.web?.uri || '#'
+      })) || [];
+      return { text, sources };
+    } catch (error: any) {
+      console.error("Grounded Query Error:", error);
+      return { text: `Error: ${error?.message || 'Search failed'}`, sources: [] };
+    }
+  },
+
+  // ==================== FACT CHECK ====================
+  async factCheck(claim: string) {
+    return this.groundedQuery(claim, `${SAFETY_PREAMBLE} You are a fact-checker for a 10-year-old homeschool student. ${STUDENT_CONTEXT}
 
 When the student asks you to check something:
 1. Use Google Search to verify the claim
@@ -25,47 +46,55 @@ When the student asks you to check something:
 4. If it's false, explain what the truth actually is
 5. Mention where you found the answer
 
-Keep it short and direct — this is a quick-check tool, not a research paper.`,
-          tools: [{ googleSearch: {} }],
-        },
-      });
-
-      const text = response.text || "I couldn't verify that right now.";
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-        title: chunk.web?.title || 'Source',
-        uri: chunk.web?.uri || '#'
-      })) || [];
-
-      return { text, sources };
-    } catch (error) {
-      console.error("Fact Check Error:", error);
-      return { text: "Error checking that fact. Try again.", sources: [] };
-    }
+Keep it short and direct — this is a quick-check tool, not a research paper.`);
   },
 
   // ==================== RESEARCHER (Grounding with Google Search) ====================
   async searchHelp(query: string) {
+    return this.groundedQuery(query, `${SAFETY_PREAMBLE} You are a research assistant for a homeschool student. ${STUDENT_CONTEXT} Use Google Search to find verified, factual information. Cite your sources. Present findings clearly with short paragraphs and bold key terms. If you're unsure about something, say so rather than guessing.`);
+  },
+
+  // ==================== THEME BRAINSTORM CHAT ====================
+  async chatThemeBrainstorm(
+    messages: { role: 'user' | 'ai'; text: string }[],
+    usedThemes: string[]
+  ): Promise<string> {
     try {
       const ai = new GoogleGenAI({ apiKey: API_KEY });
-      const response: GenerateContentResponse = await ai.models.generateContent({
+      const usedList = usedThemes.length > 0
+        ? `\n\nTHEMES ALREADY USED (do NOT suggest these again): ${usedThemes.join(', ')}`
+        : '';
+
+      // Build multi-turn conversation contents
+      const contents = messages.map(m => ({
+        role: m.role === 'ai' ? 'model' : 'user',
+        parts: [{ text: m.text }]
+      }));
+
+      const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: `${query}`,
+        contents,
         config: {
-          systemInstruction: `${SAFETY_PREAMBLE} You are a research assistant for a homeschool student. ${STUDENT_CONTEXT} Use Google Search to find verified, factual information. Cite your sources. Present findings clearly with short paragraphs and bold key terms. If you're unsure about something, say so rather than guessing.`,
-          tools: [{ googleSearch: {} }],
-        },
+          systemInstruction: `You are a creative brainstorming partner helping a homeschool mom plan weekly discovery themes for her 10-year-old son. He has ADHD and is on a trade school track — loves hands-on work, vehicles, machines, building things, engines, and tools.
+
+YOUR ROLE: Collaborate naturally. Riff on her ideas, suggest angles she might not have thought of, ask what he's been into lately, and help her land on a theme that's specific enough to fill a week of learning (videos, reading, hands-on projects).
+
+THEME TYPES to draw from:
+• OCCUPATION DEEP-DIVES: Specific trade jobs — auto mechanic, welder, heavy equipment operator, electrician, HVAC tech, pit crew, body work tech, CNC machinist, plumber, diesel mechanic, etc.
+• INTEREST-BASED: Things that excite him — JDM cars, monster trucks, off-road builds, how engines work, fabrication, motorsports, custom builds, workshop setups, etc.
+• MIX IT UP: Cross trades with interests when it fits naturally.
+
+STYLE: Be conversational and enthusiastic, like a fellow homeschool parent who gets it. Keep responses SHORT — 2-3 sentences max per idea, no walls of text. When suggesting themes, give a punchy title and a quick "the week would cover..." sentence. Suggest 1-2 ideas at a time unless she asks for more.${usedList}`,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
       });
 
-      const text = response.text || "I couldn't find an answer right now.";
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-        title: chunk.web?.title || 'Source',
-        uri: chunk.web?.uri || '#'
-      })) || [];
-
-      return { text, sources };
-    } catch (error) {
-      console.error("Gemini Search Error:", error);
-      return { text: "Error searching for info.", sources: [] };
+      const parts = (response as any).candidates?.[0]?.content?.parts || [];
+      const text = parts.filter((p: any) => p.text && !p.thought).map((p: any) => p.text).join('\n');
+      return text || response.text || "Hmm, I'm drawing a blank. Try telling me what he's been into lately!";
+    } catch (error: any) {
+      console.error("Theme Brainstorm Error:", error);
+      return "Something went wrong — try again in a sec!";
     }
   },
 
@@ -123,6 +152,67 @@ For each task, provide: name (short, action-oriented), description (1-2 sentence
     }
   },
 
+  /**
+   * Enhanced Learning Insight — analyzes completion data, check-in responses, AND reflections
+   * to give the parent patterns/trends + a daily summary.
+   */
+  async generateLearningInsight(data: {
+    completionData: { date: string; taskName: string; completed: boolean; completedAt?: string }[];
+    checkIns: { date: string; focused: boolean; tooHard: boolean; custom: boolean; customQuestion: string }[];
+    reflections: string[];
+    todayDate: string;
+  }) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: API_KEY });
+
+      const completionSummary = data.completionData.length > 0
+        ? data.completionData.map(t => `${t.date}: "${t.taskName}" — ${t.completed ? 'completed' + (t.completedAt ? ` at ${new Date(t.completedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : '') : 'not completed'}`).join('\n')
+        : 'No task data available yet.';
+
+      const checkInSummary = data.checkIns.length > 0
+        ? data.checkIns.map(c => `${c.date}: Focused=${c.focused ? 'Yes' : 'No'}, Too Hard=${c.tooHard ? 'Yes' : 'No'}, "${c.customQuestion}"=${c.custom ? 'Yes' : 'No'}`).join('\n')
+        : 'No daily check-in data yet.';
+
+      const reflectionSummary = data.reflections.length > 0
+        ? data.reflections.join(' | ')
+        : 'No voice reflections yet.';
+
+      const contents = `Analyze this learning data for a 10-year-old homeschool student with ADHD. Today is ${data.todayDate}.
+
+TASK COMPLETION DATA (recent days):
+${completionSummary}
+
+DAILY CHECK-IN RESPONSES:
+${checkInSummary}
+
+VOICE REFLECTIONS/NOTES:
+${reflectionSummary}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents,
+        config: {
+          systemInstruction: `You are an educational insight analyst helping a homeschool parent understand their child's learning patterns. This child has ADHD.
+
+Provide TWO sections in your response:
+
+**Today:** A 1-2 sentence summary of how today went (or "No data for today yet" if no today data).
+
+**Patterns This Week:** 2-3 sentences covering:
+- Which types of tasks he engages with most vs avoids
+- Whether he's reporting feeling focused or finding things too hard (from check-in data)
+- One specific, actionable suggestion for the parent based on what you see
+
+Write in a warm, supportive tone. Be specific — name actual tasks or days when you see patterns. If there's very little data, say so honestly and encourage continued use rather than making up patterns.`
+        }
+      });
+      return response.text;
+    } catch (error) {
+      console.error("Learning Insight Error:", error);
+      return "Could not generate learning insight. Check back once more data is available.";
+    }
+  },
+
   async generateReflectionPrompts(taskName: string, description: string) {
     try {
       const ai = new GoogleGenAI({ apiKey: API_KEY });
@@ -155,22 +245,18 @@ For each task, provide: name (short, action-oriented), description (1-2 sentence
   async analyzeImage(base64Image: string, prompt: string) {
     try {
       const ai = new GoogleGenAI({ apiKey: API_KEY });
+      const fullPrompt = `${SAFETY_PREAMBLE} ${STUDENT_CONTEXT} You are a photo analysis tool for a homeschool student. Analyze this image.\n\n${prompt || "Describe what you see in this photo in detail. Read any visible text. Identify objects, labels, and how they connect to learning."}`;
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: {
-          parts: [
-            { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-            { text: prompt || "Describe what you see in this photo in detail. Read any visible text. Identify objects, labels, and how they connect to learning." }
-          ]
-        },
-        config: {
-          systemInstruction: `${SAFETY_PREAMBLE} ${STUDENT_CONTEXT} You are a photo analysis tool for a homeschool student. When analyzing images: (1) Read all visible text accurately, (2) Identify and name all objects, (3) Explain how what you see connects to learning, (4) Keep your response organized with clear sections. If the image is of schoolwork, check for correctness and provide gentle feedback.`
-        }
+        contents: [
+          { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
+          { text: fullPrompt }
+        ],
       });
       return response.text;
-    } catch (error) {
-      console.error("Image Analysis Error:", error);
-      return "I'm sorry, I couldn't analyze the image.";
+    } catch (error: any) {
+      console.error("Image Analysis Error:", error?.message || error);
+      return "Sorry, I couldn't analyze that image. Try a different photo.";
     }
   },
 
@@ -248,7 +334,7 @@ For each task, provide: name (short, action-oriented), description (1-2 sentence
     try {
       const ai = new GoogleGenAI({ apiKey: API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.0-flash-preview-image-generation',
         contents: {
           parts: [{ text: `A clean, educational diagram or illustration for a 10-year-old student. Style: clear labels, bold lines, dark background with warm brown and green accents. Subject: ${prompt}` }]
         },
@@ -396,28 +482,7 @@ Make it feel like a mini history adventure — not a boring dictionary entry.`
   },
 
   async researcherText(query: string) {
-    try {
-      const ai = new GoogleGenAI({ apiKey: API_KEY });
-      const response: GenerateContentResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: query,
-        config: {
-          systemInstruction: `${SAFETY_PREAMBLE} You are a research assistant for a homeschool student. ${STUDENT_CONTEXT} Use Google Search to find verified, factual information. Present your findings in a clear, organized way. Include specific facts, dates, and details. Cite where you found your information. This is a research tool — go deeper than a quick answer. Help the student learn something new.`,
-          tools: [{ googleSearch: {} }],
-        },
-      });
-
-      const text = response.text || "I couldn't find an answer right now.";
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-        title: chunk.web?.title || 'Source',
-        uri: chunk.web?.uri || '#'
-      })) || [];
-
-      return { text, sources };
-    } catch (error) {
-      console.error("Researcher Error:", error);
-      return { text: "Error researching. Please try again.", sources: [] };
-    }
+    return this.groundedQuery(query, `${SAFETY_PREAMBLE} You are a research assistant for a homeschool student. ${STUDENT_CONTEXT} Use Google Search to find verified, factual information. Present your findings in a clear, organized way. Include specific facts, dates, and details. Cite where you found your information. This is a research tool — go deeper than a quick answer. Help the student learn something new.`);
   },
 
   // ==================== GEMINI LIVE API (Voice mode for StudyChat & Researcher) ====================
@@ -451,7 +516,7 @@ Talk like an excited science teacher who loves sharing cool facts. Keep response
       const ai = new GoogleGenAI({ apiKey: API_KEY });
 
       const session = await ai.live.connect({
-        model: 'gemini-2.5-flash-preview-native-audio-dialog',
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         callbacks: {
           onopen: () => callbacks.onOpen(),
           onmessage: (message: LiveServerMessage) => {
@@ -484,28 +549,7 @@ Talk like an excited science teacher who loves sharing cool facts. Keep response
 
   // ==================== MANUAL LOOKUP (with Google Search) ====================
   async manualLookup(query: string) {
-    try {
-      const ai = new GoogleGenAI({ apiKey: API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: query,
-        config: {
-          systemInstruction: `${SAFETY_PREAMBLE} You are a technical documentation expert helping a homeschool student find official manuals, assembly guides, and setup instructions for tools, kits, products, electronics, and appliances. ${STUDENT_CONTEXT} Prioritize official manufacturer websites and PDF documentation. Provide clear, direct links to official sources. If the product has a model number, use it to find the exact manual.`,
-          tools: [{ googleSearch: {} }]
-        }
-      });
-
-      const text = response.text || "";
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-        title: chunk.web?.title || 'Source',
-        uri: chunk.web?.uri || '#'
-      })) || [];
-
-      return { text, sources };
-    } catch (error) {
-      console.error("Manual Lookup Error:", error);
-      return { text: "I'm sorry, I couldn't find instructions for that.", sources: [] };
-    }
+    return this.groundedQuery(query, `${SAFETY_PREAMBLE} You are a technical documentation expert helping a homeschool student find official manuals, assembly guides, and setup instructions for tools, kits, products, electronics, and appliances. ${STUDENT_CONTEXT} Search for manuals, guides, how-to articles, and helpful instructions from any reliable source. Official manufacturer sites are great, but also include well-known tutorial sites, WikiHow, YouTube descriptions, and community guides. If the product has a model number, use it. If the query is general (like how to use a tool), give practical step-by-step instructions directly.`);
   },
 
   // ==================== GENERIC SHOP HELP (kept for backward compat) ====================
@@ -517,33 +561,21 @@ Talk like an excited science teacher who loves sharing cool facts. Keep response
       vocab: `${SAFETY_PREAMBLE} You are a word wizard for a 10-year-old. ${STUDENT_CONTEXT}`
     };
 
+    if (category === 'manual') {
+      return this.groundedQuery(query, context[category]);
+    }
+
     try {
       const ai = new GoogleGenAI({ apiKey: API_KEY });
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: query,
-        config: {
-          systemInstruction: context[category],
-          tools: category === 'manual' ? [{ googleSearch: {} }] : undefined
-        }
+        config: { systemInstruction: context[category] }
       });
-
-      const text = response.text || "";
-      const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-        title: chunk.web?.title || 'Source',
-        uri: chunk.web?.uri || '#'
-      })) || [];
-
-      if (category === 'manual') {
-        return { text, sources };
-      }
-
-      return text;
+      return response.text || "";
     } catch (error) {
       console.error("Shop Help Error:", error);
-      return category === 'manual'
-        ? { text: "I'm sorry, I hit a snag helping you with that.", sources: [] }
-        : "I'm sorry, I hit a snag helping you with that.";
+      return "I'm sorry, I hit a snag helping you with that.";
     }
   }
 };

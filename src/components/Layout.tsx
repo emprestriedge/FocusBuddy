@@ -14,13 +14,13 @@ const Layout: React.FC<LayoutProps> = ({ children, currentMode, setMode, userRol
   const studentNav = [
     { mode: AppMode.STUDENT, icon: Icons.Home, label: 'Today' },
     { mode: AppMode.CALENDAR, icon: Icons.Calendar, label: 'Week' },
-    { mode: AppMode.PORTFOLIO, icon: Icons.Portfolio, label: 'Gallery' },
+    { mode: AppMode.PORTFOLIO, icon: Icons.Portfolio, label: 'Library' },
     { mode: AppMode.TOOLBOX, icon: Icons.Toolbox, label: 'Toolbox' },
   ];
 
   const parentNav = [
     { mode: AppMode.ADMIN, icon: Icons.Admin, label: 'Planner' },
-    { mode: AppMode.PORTFOLIO, icon: Icons.Portfolio, label: 'Gallery' },
+    { mode: AppMode.PORTFOLIO, icon: Icons.Portfolio, label: 'Library' },
   ];
 
   const navItems = userRole === 'parent' ? parentNav : studentNav;

@@ -31,6 +31,47 @@ const compressImage = (base64Str: string, maxWidth = 800, quality = 0.75): Promi
   });
 };
 
+/**
+ * Play a short beep tone using the Web Audio API.
+ * freq: Hz, duration: seconds, type: 'start' or 'stop'
+ */
+const playBeep = (type: 'start' | 'stop' | 'countdown') => {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'start') {
+      // Two ascending tones
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.setValueAtTime(900, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    } else if (type === 'stop') {
+      // Two descending tones
+      osc.frequency.setValueAtTime(900, ctx.currentTime);
+      osc.frequency.setValueAtTime(500, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    } else {
+      // Short tick for countdown
+      osc.frequency.setValueAtTime(440, ctx.currentTime);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    }
+  } catch (e) {
+    // Audio not supported — fail silently
+  }
+};
+
 const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete }) => {
   const [reflection, setReflection] = useState(task.reflectionText || '');
   const [photoUrl, setPhotoUrl] = useState(task.photoUrl || '');
@@ -41,11 +82,14 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [recordingCountdown, setRecordingCountdown] = useState<number | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const recordingTimerRef = useRef<number | null>(null);
 
   const needsPhoto = task.accountabilityType === 'photo' || task.accountabilityType === 'both';
   const needsVoice = task.accountabilityType === 'voice' || task.accountabilityType === 'both';
@@ -71,9 +115,38 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
     }
   };
 
+  // Clean up recording timer on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, []);
+
   const startRecording = async () => {
     try {
+      // Request mic access first
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // 3-2-1 countdown before recording begins
+      setRecordingCountdown(3);
+      playBeep('countdown');
+
+      await new Promise<void>((resolve) => {
+        let count = 3;
+        const interval = setInterval(() => {
+          count--;
+          if (count > 0) {
+            setRecordingCountdown(count);
+            playBeep('countdown');
+          } else {
+            clearInterval(interval);
+            setRecordingCountdown(null);
+            resolve();
+          }
+        }, 700);
+      });
+
+      // Start recording
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
@@ -81,6 +154,14 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
       mediaRecorder.onstop = async () => {
+        // Stop recording timer
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+          recordingTimerRef.current = null;
+        }
+        // Stop all mic tracks
+        stream.getTracks().forEach(track => track.stop());
+
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
         const reader = new FileReader();
         reader.onloadend = async () => {
@@ -94,20 +175,38 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
         };
         reader.readAsDataURL(audioBlob);
       };
+
+      // Play start beep and begin
+      playBeep('start');
       mediaRecorder.start();
       setIsRecording(true);
+      setRecordingSeconds(0);
+
+      // Start the recording timer
+      recordingTimerRef.current = window.setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+
     } catch (err) {
       console.error("Mic error:", err);
       setIsRecording(false);
+      setRecordingCountdown(null);
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      playBeep('stop');
       mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
     }
     setIsRecording(false);
   };
+
+  const formatRecordingTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   const handleSubmit = () => {
     if (!task.completed) {
@@ -188,30 +287,94 @@ const TaskDetail: React.FC<TaskDetailProps> = ({ task, onClose, onToggleComplete
 
                 {needsVoice && (
                   <div className="space-y-5">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.3em] block" style={{ color: COLORS.caramel }}>Voice Summary</label>
-                      <button onClick={isRecording ? stopRecording : startRecording} className={`p-3 rounded-full transition-all shadow-md ${isRecording ? 'bg-red-500 animate-pulse' : ''}`} style={!isRecording ? { backgroundColor: COLORS.green, color: COLORS.cream } : { color: 'white' }}>
-                        <div className="scale-110">{isRecording ? <Icons.Check /> : <Icons.Mic />}</div>
+                    <label className="text-[9px] font-bold uppercase tracking-[0.3em] block" style={{ color: COLORS.caramel }}>Voice Summary</label>
+
+                    {/* Countdown overlay */}
+                    {recordingCountdown !== null && (
+                      <div className="flex flex-col items-center justify-center py-10 rounded-[2rem] animate-in zoom-in duration-300" style={{ background: 'rgba(81, 55, 33, 0.6)' }}>
+                        <div className="text-7xl font-serif animate-pulse" style={{ color: COLORS.green }}>{recordingCountdown}</div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-4" style={{ color: COLORS.caramel }}>Get ready to speak...</p>
+                      </div>
+                    )}
+
+                    {/* Recording state — large, unmissable */}
+                    {isRecording && recordingCountdown === null && (
+                      <div className="rounded-[2rem] p-6 space-y-5 animate-in fade-in duration-500" style={{ background: 'rgba(239, 68, 68, 0.08)', border: '2px solid rgba(239, 68, 68, 0.35)' }}>
+                        {/* Recording header with timer */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full bg-red-500 animate-pulse shadow-lg shadow-red-500/30"></div>
+                            <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-red-400">Recording</span>
+                          </div>
+                          <span className="font-mono text-2xl font-bold text-red-400">{formatRecordingTime(recordingSeconds)}</span>
+                        </div>
+
+                        {/* Animated waveform bars */}
+                        <div className="flex items-center justify-center gap-1 h-16">
+                          {Array.from({ length: 20 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="w-1.5 rounded-full"
+                              style={{
+                                backgroundColor: COLORS.green,
+                                opacity: 0.6,
+                                height: `${20 + Math.random() * 80}%`,
+                                animation: `waveBar 0.5s ease-in-out ${i * 0.05}s infinite alternate`,
+                              }}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Large stop button */}
+                        <button
+                          onClick={stopRecording}
+                          className="w-full py-5 rounded-2xl font-bold text-[11px] uppercase tracking-[0.3em] transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 shadow-lg"
+                          style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)', color: 'white' }}
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+                          Stop Recording
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Start recording button — only when NOT recording and NOT in countdown */}
+                    {!isRecording && recordingCountdown === null && (
+                      <button
+                        onClick={startRecording}
+                        disabled={isTranscribing}
+                        className="w-full py-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] active:scale-95 border-2 border-dashed disabled:opacity-30"
+                        style={{ borderColor: COLORS.green, background: 'rgba(93, 211, 182, 0.06)' }}
+                      >
+                        <div className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg" style={{ backgroundColor: COLORS.green, color: COLORS.cream }}>
+                          <Icons.Mic />
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color: COLORS.green }}>Tap to Record</span>
+                        <span className="text-[8px] uppercase tracking-widest" style={{ color: COLORS.caramel }}>A 3-second countdown will start</span>
                       </button>
-                    </div>
+                    )}
+
+                    {/* Textarea for transcript */}
                     <div className="relative">
                       <textarea
                         value={reflection}
                         onChange={(e) => setReflection(e.target.value)}
-                        placeholder={isRecording ? "Listening..." : "Tell me what you learned..."}
+                        placeholder={isRecording ? "Speak now — your words will appear here..." : "Tell me what you learned..."}
                         className="w-full h-40 p-6 rounded-[2rem] font-serif text-xl resize-none leading-relaxed overflow-y-auto border outline-none"
-                        style={{ background: 'rgba(81, 55, 33, 0.42)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+                        style={{ background: 'rgba(81, 55, 33, 0.42)', borderColor: isRecording ? 'rgba(239, 68, 68, 0.35)' : 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
                       />
                       {isTranscribing && (
-                        <div className="absolute inset-0 rounded-[2rem] flex items-center justify-center" style={{ background: 'rgba(60, 37, 32, 0.3)', backdropFilter: 'blur(2px)' }}>
+                        <div className="absolute inset-0 rounded-[2rem] flex flex-col items-center justify-center gap-3" style={{ background: 'rgba(60, 37, 32, 0.5)', backdropFilter: 'blur(4px)' }}>
                           <div className="flex space-x-2">
-                            <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: COLORS.green }}></div>
-                            <div className="w-2 h-2 rounded-full animate-bounce [animation-delay:0.2s]" style={{ backgroundColor: COLORS.green }}></div>
-                            <div className="w-2 h-2 rounded-full animate-bounce [animation-delay:0.4s]" style={{ backgroundColor: COLORS.green }}></div>
+                            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: COLORS.green }}></div>
+                            <div className="w-3 h-3 rounded-full animate-bounce [animation-delay:0.2s]" style={{ backgroundColor: COLORS.green }}></div>
+                            <div className="w-3 h-3 rounded-full animate-bounce [animation-delay:0.4s]" style={{ backgroundColor: COLORS.green }}></div>
                           </div>
+                          <span className="text-[9px] font-bold uppercase tracking-[0.3em]" style={{ color: COLORS.cream }}>Transcribing your voice...</span>
                         </div>
                       )}
                     </div>
+
+                    {/* Reflection prompts */}
                     {loadingPrompts ? (
                       <div className="flex space-x-2 px-2">
                         <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: COLORS.caramel }}></div>

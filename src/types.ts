@@ -80,3 +80,37 @@ export interface StarData {
   rewards: StarReward[];
   redemptions: StarRedemption[];
 }
+
+// ========== STAR LEDGER (Bank Statement) ==========
+
+export type StarLedgerType =
+  | 'task_deposit'      // Daily grouped task stars
+  | 'daily_bonus'       // +1 for finishing all tasks in a day
+  | 'weekly_bonus'      // +5 for finishing the whole week
+  | 'redemption'        // Spending stars on a reward
+  | 'manual_add'        // Parent added stars
+  | 'manual_remove';    // Parent removed stars
+
+export interface StarLedgerEntry {
+  id: string;
+  date: string;           // YYYY-MM-DD
+  timestamp: string;      // ISO string for ordering
+  type: StarLedgerType;
+  amount: number;         // positive for deposits, negative for withdrawals
+  description: string;    // e.g. "Completed 3 tasks", "Daily Bonus", "Game Night (redeemed)"
+  note?: string;          // Optional parent note for manual adjustments
+  balanceAfter: number;   // Running balance after this entry
+}
+
+// ========== DAILY CHECK-IN ==========
+
+export interface DailyCheckIn {
+  date: string;           // YYYY-MM-DD
+  submittedAt: string;    // ISO timestamp
+  answers: {
+    focused: boolean | number;     // "Did you feel focused today?" (1-10 scale, legacy: boolean)
+    tooHard: boolean | number;     // "Was anything too hard today?" (1-10 scale, legacy: boolean)
+    custom: boolean | number;      // Parent's custom weekly question (1-10 scale, legacy: boolean)
+  };
+  customQuestion: string; // The actual question text at time of submission
+}

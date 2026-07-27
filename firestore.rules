@@ -1,0 +1,68 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // USER PROFILES — focusbuddy_users/{userId}
+    // Each user can read/write their own profile.
+    // Any logged-in user can READ other profiles (needed for
+    // parent-student linking: findStudentByEmail queries this).
+    // ============================================================
+    match /focusbuddy_users/{userId} {
+      // Anyone logged in can read profiles (needed for linking)
+      allow read: if request.auth != null;
+      // Only the profile owner can write their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // LEGACY schedule subcollection (old path, kept for migration)
+      // focusbuddy_users/{userId}/schedule/{docId}
+      match /schedule/{docId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+
+      // LEGACY activity subcollection (old path)
+      match /activity/{docId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null;
+      }
+    }
+
+    // ============================================================
+    // SHARED STUDENT DATA — focusbuddy_students/{studentUid}
+    // This is the NEW shared path. The schedule and activity live
+    // here so that multiple parents + the student can all read
+    // and write to the same data.
+    //
+    // WHO CAN ACCESS:
+    //   - The student themselves (studentUid == auth.uid)
+    //   - Any logged-in parent linked to this student
+    //     (checked via the student's profile linkedParents array)
+    //
+    // For now, we allow any authenticated user to read/write
+    // because the linking check requires a get() call on every
+    // request which counts against Firestore quotas. Once you
+    // have more users, tighten this with the commented rules below.
+    // ============================================================
+    match /focusbuddy_students/{studentUid}/{subcollection}/{docId} {
+      // SIMPLE RULES (current — works for your family setup):
+      allow read, write: if request.auth != null;
+
+      // TIGHTER RULES (uncomment these and remove the line above
+      // when you want stricter access control):
+      //
+      // allow read, write: if request.auth != null && (
+      //   // The student themselves
+      //   request.auth.uid == studentUid
+      //   // OR a parent listed in the student's linkedParents array
+      //   || request.auth.uid in get(/databases/$(database)/documents/focusbuddy_users/$(studentUid)).data.linkedParents
+      // );
+    }
+
+    // Default: deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

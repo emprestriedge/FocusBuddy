@@ -1,5 +1,16 @@
 import React from 'react';
 
+/**
+ * Returns YYYY-MM-DD in the user's LOCAL timezone (not UTC).
+ * This prevents the bug where evening Central Time dates shift forward a day.
+ */
+export const toLocalDateString = (date: Date = new Date()): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const COLORS = {
   green: '#5DD3B6',      // Accent — buttons, active states (use sparingly)
   cream: '#F0E2CE',      // Light — text on dark, warm off-white cream

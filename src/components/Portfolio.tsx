@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Heart, Search, Star, Trash2 } from 'lucide-react';
+import { Heart, Search, Star, Trash2, Copy } from 'lucide-react';
 import { Task } from '../types';
 import { COLORS, Icons } from '../constants';
 import { storageService } from '../services/storageService';
@@ -114,12 +114,12 @@ const PortfolioItem = React.memo(
           </div>
 
           {/* Reflection text */}
-          {task.reflection && (
+          {task.reflectionText && (
             <p
               className="text-sm line-clamp-4 mb-4"
               style={{ color: COLORS.caramel }}
             >
-              {task.reflection}
+              {task.reflectionText}
             </p>
           )}
 
@@ -182,7 +182,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
       result = result.filter(
         (task) =>
           task.name.toLowerCase().includes(query) ||
-          (task.reflection && task.reflection.toLowerCase().includes(query))
+          (task.reflectionText && task.reflectionText.toLowerCase().includes(query))
       );
     }
 
@@ -291,7 +291,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
             className="text-4xl md:text-7xl font-serif mb-6"
             style={{ color: COLORS.cream }}
           >
-            Gallery.
+            Library.
           </h1>
 
           {/* Search bar */}
@@ -384,7 +384,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
                   ? 'No tasks match your search.'
                   : showFavoritesOnly
                   ? 'No favorites yet.'
-                  : 'Complete tasks and add them to the gallery to get started.'}
+                  : 'Complete tasks and add them to the library to get started.'}
               </p>
             </div>
           </div>
@@ -472,7 +472,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
             style={{
               backgroundColor: `${COLORS.coffee}95`,
               borderColor: COLORS.green,
-              border: `1px solid ${COLORS.green}40`,
+              border: '0.5px solid rgba(240, 226, 206, 0.08)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -550,7 +550,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
               </div>
 
               {/* Reflection */}
-              {selectedTask.reflection && (
+              {selectedTask.reflectionText && (
                 <div className="mb-6">
                   <p
                     className="text-xs font-semibold uppercase tracking-wider mb-2"
@@ -562,7 +562,7 @@ export const Portfolio: React.FC<PortfolioProps> = ({
                     className="leading-relaxed"
                     style={{ color: COLORS.cream }}
                   >
-                    {selectedTask.reflection}
+                    {selectedTask.reflectionText}
                   </p>
                 </div>
               )}
@@ -588,6 +588,20 @@ export const Portfolio: React.FC<PortfolioProps> = ({
                     fill={selectedTask.isFavorite ? COLORS.green : 'none'}
                   />
                   {selectedTask.isFavorite ? 'Favorited' : 'Favorite'}
+                </button>
+                <button
+                  onClick={() => {
+                    const text = [selectedTask.name, selectedTask.reflectionText].filter(Boolean).join(String.fromCharCode(10) + String.fromCharCode(10));
+                    navigator.clipboard.writeText(text);
+                  }}
+                  className="flex-1 px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2"
+                  style={{
+                    backgroundColor: `${COLORS.coffee}40`,
+                    color: COLORS.caramel,
+                  }}
+                >
+                  <Copy size={18} />
+                  Copy
                 </button>
                 <button
                   onClick={() => {

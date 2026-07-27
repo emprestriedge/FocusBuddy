@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Task } from '../types';
-import { Icons, COLORS } from '../constants';
+import { Icons, COLORS, toLocalDateString } from '../constants';
 
 interface ScheduleCalendarProps {
   tasks: Task[];
@@ -20,12 +20,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ tasks, onSelectTask
     return DAYS.map((_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return toLocalDateString(d);
     });
   };
 
   const weekDates = getWeekDates(weekOffset);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = toLocalDateString();
 
   const weekLabel = useMemo(() => {
     const start = new Date(weekDates[0] + 'T12:00:00');

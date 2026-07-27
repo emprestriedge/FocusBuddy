@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { storageService } from '../services/storageService';
 import { geminiService } from '../services/geminiService';
-import { Task, ActivityEntry, StarData, StarReward } from '../types';
+import { Task, StarData, StarReward, StarLedgerEntry, DailyCheckIn } from '../types';
 import { COLORS, Icons, toLocalDateString } from '../constants';
 
 interface AdminPanelProps {
@@ -21,22 +21,43 @@ const REWARD_EMOJIS = ['🎮', '🍕', '🎬', '🏀', '🎯', '🎨', '🎵', '
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, parentUid, starData, onStarDataChanged, onLinked }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [curriculumPrompt, setCurriculumPrompt] = useState('');
   const [feedback, setFeedback] = useState('');
-  const [loading, setLoading] = useState(false);
   const [linkEmail, setLinkEmail] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [aiInsight, setAiInsight] = useState('');
-  const [suggestedTasks, setSuggestedTasks] = useState<any[]>([]);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
+  // Theme brainstorm chat state
+  const [themeChatMessages, setThemeChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
+  const [themeChatInput, setThemeChatInput] = useState('');
+  const [themeChatLoading, setThemeChatLoading] = useState(false);
+  const [usedThemes, setUsedThemes] = useState<string[]>([]);
+  const [saveThemeInput, setSaveThemeInput] = useState('');
+  const [showSaveTheme, setShowSaveTheme] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Reward shop state
   const [newRewardName, setNewRewardName] = useState('');
   const [newRewardCost, setNewRewardCost] = useState('');
   const [newRewardEmoji, setNewRewardEmoji] = useState('🎮');
+
+  // Star Ledger state
+  const [showLedger, setShowLedger] = useState(false);
+  const [ledgerEntries, setLedgerEntries] = useState<StarLedgerEntry[]>([]);
+  const [ledgerMonth, setLedgerMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [adjustAmount, setAdjustAmount] = useState('');
+  const [adjustNote, setAdjustNote] = useState('');
+
+  // Custom check-in question state
+  const [customQuestion, setCustomQuestion] = useState('');
+  const [customQuestionSaved, setCustomQuestionSaved] = useState(false);
+
+  // Check-in data for insight
+  const [recentCheckIns, setRecentCheckIns] = useState<DailyCheckIn[]>([]);
 
   // Week navigation
   const [weekOffset, setWeekOffset] = useState(0);
@@ -63,30 +84,96 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
   // Quick add state per day
   const [quickAdds, setQuickAdds] = useState<Record<string, { name: string; accountability: 'photo' | 'voice' | 'both' | 'none' }>>({});
 
+  // Daily notes state
+  const [dailyNotes, setDailyNotes] = useState<Record<string, string>>({});
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const allTasks = storageService.getTasks();
     setTasks(allTasks);
+    setDailyNotes(storageService.getDailyNotes());
 
     const reflections = allTasks
       .filter(t => t.completed && t.reflectionText)
       .map(t => t.reflectionText as string);
 
-    if (reflections.length > 0) {
-      geminiService.summarizeStudentReflections(reflections).then(setAiInsight);
-    } else {
-      setAiInsight("No recent student notes yet. Insights appear once tasks are completed with voice summaries!");
-    }
-  }, []);
+    // Build completion data for enhanced insight
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 7);
+    const startStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
 
-  // Subscribe to activity feed
-  useEffect(() => {
-    if (studentUid) {
-      const unsub = storageService.subscribeToActivity(studentUid, setActivityFeed);
-      return () => unsub();
+    const recentTasks = allTasks.filter(t => t.date >= startStr);
+    const completionData = recentTasks.map(t => ({
+      date: t.date,
+      taskName: t.name,
+      completed: t.completed,
+      completedAt: t.completedAt
+    }));
+
+    if (completionData.length > 0 || reflections.length > 0) {
+      // Use enhanced insight if we have any data
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+      // We'll get check-ins async and update insight when ready
+      if (studentUid) {
+        storageService.getCheckInsForRange(studentUid, startStr, todayStr).then((checkIns) => {
+          geminiService.generateLearningInsight({
+            completionData,
+            checkIns: checkIns.map(c => ({
+              date: c.date,
+              focused: typeof c.answers.focused === 'number' ? c.answers.focused >= 6 : c.answers.focused as boolean,
+              tooHard: typeof c.answers.tooHard === 'number' ? c.answers.tooHard >= 6 : c.answers.tooHard as boolean,
+              custom: typeof c.answers.custom === 'number' ? c.answers.custom >= 6 : c.answers.custom as boolean,
+              customQuestion: c.customQuestion,
+              // Pass raw numeric values for richer insight
+              focusedScore: typeof c.answers.focused === 'number' ? c.answers.focused : undefined,
+              tooHardScore: typeof c.answers.tooHard === 'number' ? c.answers.tooHard : undefined,
+              customScore: typeof c.answers.custom === 'number' ? c.answers.custom : undefined
+            })),
+            reflections,
+            todayDate: todayStr
+          }).then(setAiInsight);
+        });
+      } else if (reflections.length > 0) {
+        geminiService.summarizeStudentReflections(reflections).then(setAiInsight);
+      } else {
+        setAiInsight("Waiting for data... Once Zaiden starts completing tasks and doing daily check-ins, patterns and insights will appear here.");
+      }
+    } else {
+      setAiInsight("No learning data yet. Insights will appear once tasks are completed and daily check-ins are submitted.");
     }
   }, [studentUid]);
+
+  // Load used themes from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('focusbuddy_used_themes');
+    if (stored) setUsedThemes(JSON.parse(stored));
+  }, []);
+
+  // Load custom question and recent check-ins
+  useEffect(() => {
+    if (studentUid) {
+      storageService.getCustomQuestion(studentUid).then(setCustomQuestion);
+
+      // Get last 7 days of check-ins for learning insight
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 7);
+      const startDate = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth() + 1).padStart(2, '0')}-${String(weekAgo.getDate()).padStart(2, '0')}`;
+      const endDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      storageService.getCheckInsForRange(studentUid, startDate, endDate).then(setRecentCheckIns);
+    }
+  }, [studentUid]);
+
+  // Subscribe to star ledger when visible
+  useEffect(() => {
+    if (showLedger && studentUid) {
+      const unsub = storageService.subscribeLedger(studentUid, ledgerMonth, setLedgerEntries);
+      return () => unsub();
+    }
+  }, [showLedger, ledgerMonth, studentUid]);
 
   const handleLinkStudent = async () => {
     if (!linkEmail.trim() || !parentUid) return;
@@ -141,31 +228,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
   // Show sync status indicator
   const cloudEnabled = storageService.isCloudEnabled();
 
-  const handleAiTaskGen = async () => {
-    if (!curriculumPrompt.trim()) return;
-    setLoading(true);
-    const generated = await geminiService.generateCurriculumTasks(curriculumPrompt);
-    setSuggestedTasks(generated);
-    setLoading(false);
+  const handleThemeChatSend = async () => {
+    const msg = themeChatInput.trim();
+    if (!msg || themeChatLoading) return;
+    const updated = [...themeChatMessages, { role: 'user' as const, text: msg }];
+    setThemeChatMessages(updated);
+    setThemeChatInput('');
+    setThemeChatLoading(true);
+    const reply = await geminiService.chatThemeBrainstorm(updated, usedThemes);
+    setThemeChatMessages([...updated, { role: 'ai' as const, text: reply }]);
+    setThemeChatLoading(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
-  const deployTasks = (targetDate: string) => {
-    const newTasks: Task[] = suggestedTasks.map((t) => ({
-      id: Math.random().toString(36).substr(2, 9),
-      date: targetDate,
-      name: t.name,
-      description: t.description,
-      accountabilityType: t.accountabilityType || 'voice',
-      completed: false
-    }));
-
-    storageService.addTasks(newTasks);
-    const updated = storageService.getTasks();
-    setTasks(updated);
-    onTasksUpdated(updated);
-    setSuggestedTasks([]);
-    setCurriculumPrompt('');
-    setFeedback(`Added ${newTasks.length} tasks!`);
+  const handleSaveTheme = () => {
+    const name = saveThemeInput.trim();
+    if (!name) return;
+    const updated = [...usedThemes, name];
+    setUsedThemes(updated);
+    localStorage.setItem('focusbuddy_used_themes', JSON.stringify(updated));
+    setSaveThemeInput('');
+    setShowSaveTheme(false);
+    setFeedback(`Theme saved: ${name} — now add tasks for the week!`);
   };
 
   const handleQuickAdd = (date: string) => {
@@ -425,6 +509,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
                   Add
                 </button>
               </div>
+
+              {/* Daily Notes */}
+              <div className="space-y-2 pt-2" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.25)' }}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">📝</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>Notes for Zaiden</span>
+                </div>
+                <textarea
+                  placeholder="Add any notes for this day..."
+                  value={dailyNotes[date] || ''}
+                  onChange={(e) => {
+                    const updated = { ...dailyNotes, [date]: e.target.value };
+                    setDailyNotes(updated);
+                  }}
+                  onBlur={() => {
+                    storageService.saveDailyNote(date, dailyNotes[date] || '');
+                  }}
+                  className="w-full px-4 py-3 rounded-xl font-serif text-base resize-none border outline-none min-h-[60px]"
+                  style={{ background: 'rgba(81, 55, 33, 0.20)', borderColor: 'rgba(81, 55, 33, 0.35)', color: COLORS.cream }}
+                  rows={2}
+                />
+              </div>
             </div>
           );
         })}
@@ -537,82 +643,336 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onTasksUpdated, studentUid, par
         )}
       </div>
 
-      {/* Sidebar: AI Planner + Activity Feed + Insight */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Star Bank (Ledger) */}
+      <div className="glass-tile-tinted rounded-[2.5rem] p-6 md:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🏦</span>
+            <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Star Bank</h3>
+          </div>
+          <button
+            onClick={() => setShowLedger(!showLedger)}
+            className="text-[9px] font-bold uppercase tracking-widest px-4 py-2 rounded-full transition-all"
+            style={{ background: 'rgba(81, 55, 33, 0.42)', color: COLORS.caramel }}
+          >
+            {showLedger ? 'Hide' : 'View Statement'}
+          </button>
+        </div>
 
-        {/* AI Planner */}
-        <div className="glass-tile-tinted rounded-[2.5rem] p-8 space-y-6">
-          <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>AI Planner</h3>
-          <textarea
-            className="w-full h-32 p-5 rounded-2xl font-serif text-lg resize-none shadow-inner outline-none border"
+        {/* Manual star adjustment */}
+        <div className="space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>
+            Add or remove stars manually
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              placeholder="Amount (e.g. 3 or -2)"
+              value={adjustAmount}
+              onChange={(e) => setAdjustAmount(e.target.value)}
+              className="w-32 px-4 py-3 rounded-xl font-serif text-lg border outline-none text-center"
+              style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+            />
+            <input
+              type="text"
+              placeholder="Note (optional)"
+              value={adjustNote}
+              onChange={(e) => setAdjustNote(e.target.value)}
+              className="flex-1 px-4 py-3 rounded-xl font-serif text-lg border outline-none"
+              style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+            />
+            <button
+              onClick={() => {
+                const amount = parseInt(adjustAmount);
+                if (!amount || amount === 0) return;
+                storageService.adjustStarsManual(amount);
+                onStarDataChanged?.();
+                // Log to ledger
+                if (studentUid) {
+                  const currentStars = storageService.getStarData().total;
+                  const entry: StarLedgerEntry = {
+                    id: Math.random().toString(36).slice(2),
+                    date: new Date().toISOString().split('T')[0],
+                    timestamp: new Date().toISOString(),
+                    type: amount > 0 ? 'manual_add' : 'manual_remove',
+                    amount,
+                    description: amount > 0 ? 'Stars added by Mom' : 'Stars removed by Mom',
+                    note: adjustNote.trim() || undefined,
+                    balanceAfter: currentStars
+                  };
+                  storageService.logLedgerEntry(studentUid, entry);
+                }
+                setFeedback(`${amount > 0 ? 'Added' : 'Removed'} ${Math.abs(amount)} star${Math.abs(amount) !== 1 ? 's' : ''}`);
+                setAdjustAmount('');
+                setAdjustNote('');
+              }}
+              disabled={!adjustAmount || parseInt(adjustAmount) === 0}
+              className="px-6 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-all hover:scale-105 disabled:opacity-30"
+              style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+
+        {/* Ledger entries */}
+        {showLedger && (
+          <div className="space-y-4 pt-4" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.45)' }}>
+            <select
+              value={ledgerMonth}
+              onChange={(e) => setLedgerMonth(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl font-serif text-lg border outline-none cursor-pointer"
+              style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
+            >
+              {(() => {
+                const options: { key: string; label: string }[] = [];
+                const now = new Date();
+                for (let i = 0; i < 3; i++) {
+                  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                  options.push({ key, label });
+                }
+                return options;
+              })().map(opt => (
+                <option key={opt.key} value={opt.key}>{opt.label}</option>
+              ))}
+            </select>
+
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {ledgerEntries.length === 0 ? (
+                <p className="text-center py-6 font-serif" style={{ color: COLORS.caramel }}>No transactions this month.</p>
+              ) : (
+                ledgerEntries.map(entry => (
+                  <div key={entry.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(81, 55, 33, 0.25)' }}>
+                    <span className="text-lg shrink-0">
+                      {entry.type === 'task_deposit' ? '✅' :
+                       entry.type === 'daily_bonus' ? '🌟' :
+                       entry.type === 'weekly_bonus' ? '🏆' :
+                       entry.type === 'redemption' ? '🎁' :
+                       entry.type === 'manual_add' ? '💝' :
+                       entry.type === 'manual_remove' ? '📝' : '⭐'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-serif text-sm truncate" style={{ color: COLORS.cream }}>{entry.description}</p>
+                      {entry.note && <p className="text-[10px] italic truncate" style={{ color: COLORS.caramel }}>"{entry.note}"</p>}
+                      <p className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>
+                        {new Date(entry.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    </div>
+                    <span className="font-serif text-sm font-bold shrink-0" style={{ color: entry.amount > 0 ? COLORS.green : '#EF4444' }}>
+                      {entry.amount > 0 ? '+' : ''}{entry.amount} ⭐
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Daily Check-In Question (Custom) */}
+      <div className="glass-tile-tinted rounded-[2.5rem] p-6 md:p-8 space-y-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">📋</span>
+          <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Daily Check-In Question</h3>
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed" style={{ color: COLORS.caramel }}>
+          Zaiden gets 3 yes/no questions each day. Two are fixed ("Did you feel focused today?" and "Was anything too hard today?"). Set the third one here — change it weekly to track what you're noticing.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            placeholder="e.g. Did you take breaks today?"
+            value={customQuestion}
+            onChange={(e) => { setCustomQuestion(e.target.value); setCustomQuestionSaved(false); }}
+            className="flex-1 px-4 py-3 rounded-xl font-serif text-lg border outline-none"
             style={{ background: 'rgba(81, 55, 33, 0.30)', borderColor: 'rgba(81, 55, 33, 0.45)', color: COLORS.cream }}
-            placeholder="Describe a topic to auto-generate homework..."
-            value={curriculumPrompt}
-            onChange={(e) => setCurriculumPrompt(e.target.value)}
           />
           <button
-            onClick={handleAiTaskGen}
-            disabled={loading || !curriculumPrompt.trim()}
-            className="w-full py-4 rounded-full font-bold text-[9px] uppercase tracking-[0.4em] shadow-lg disabled:opacity-30"
-            style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+            onClick={() => {
+              if (studentUid && customQuestion.trim()) {
+                storageService.saveCustomQuestion(studentUid, customQuestion.trim());
+                setCustomQuestionSaved(true);
+                setFeedback('Check-in question updated!');
+                setTimeout(() => setCustomQuestionSaved(false), 3000);
+              }
+            }}
+            disabled={!customQuestion.trim()}
+            className="px-6 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-all hover:scale-105 disabled:opacity-30"
+            style={{ backgroundColor: customQuestionSaved ? '#22c55e' : COLORS.green, color: COLORS.cream }}
           >
-            {loading ? 'Thinking...' : 'Generate Plan'}
+            {customQuestionSaved ? 'Saved!' : 'Save'}
           </button>
-          {suggestedTasks.length > 0 && (
-            <div className="space-y-4 pt-4" style={{ borderTop: `1px solid rgba(81, 55, 33, 0.45)` }}>
-              {suggestedTasks.map((t, i) => (
-                <div key={i} className="p-3 rounded-xl" style={{ background: 'rgba(81, 55, 33, 0.30)' }}>
-                  <p className="font-serif text-lg" style={{ color: COLORS.cream }}>{t.name}</p>
-                  <p className="text-sm" style={{ color: COLORS.caramel }}>{t.description}</p>
+        </div>
+
+        {/* Recent check-in responses */}
+        {recentCheckIns.length > 0 && (
+          <div className="space-y-2 pt-4" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.25)' }}>
+            <h4 className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>Recent Check-Ins</h4>
+            {recentCheckIns.slice(0, 5).map(ci => {
+              const formatAnswer = (val: boolean | number, inverted?: boolean) => {
+                if (typeof val === 'number') return `${val}/10`;
+                return inverted ? (val ? '❌' : '✅') : (val ? '✅' : '❌');
+              };
+              const answerColor = (val: boolean | number, inverted?: boolean) => {
+                if (typeof val === 'number') return val >= 6 ? COLORS.green : val >= 4 ? COLORS.caramel : '#EF4444';
+                return inverted ? (val ? '#EF4444' : COLORS.green) : (val ? COLORS.green : '#EF4444');
+              };
+              return (
+              <div key={ci.date} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(81, 55, 33, 0.25)' }}>
+                <span className="text-[9px] font-bold uppercase tracking-widest shrink-0 w-20" style={{ color: COLORS.caramel }}>
+                  {new Date(ci.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </span>
+                <span className="text-sm" style={{ color: answerColor(ci.answers.focused) }}>
+                  {formatAnswer(ci.answers.focused)} Focus
+                </span>
+                <span className="text-sm" style={{ color: answerColor(ci.answers.tooHard, true) }}>
+                  {formatAnswer(ci.answers.tooHard, true)} Hard
+                </span>
+                <span className="text-sm" style={{ color: answerColor(ci.answers.custom) }}>
+                  {formatAnswer(ci.answers.custom)} Custom
+                </span>
+              </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Sidebar: Theme Suggester + Insight */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        {/* Theme Brainstorm Chat */}
+        <div className="glass-tile-tinted rounded-[2.5rem] p-8 space-y-4 flex flex-col" style={{ maxHeight: '600px' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">💬</span>
+            <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Theme Brainstorm</h3>
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed" style={{ color: COLORS.caramel }}>
+            Chat with AI to brainstorm this week's discovery theme. Say what he's been into, toss out half-baked ideas — it'll riff with you.
+          </p>
+
+          {/* Chat messages */}
+          <div className="flex-1 overflow-y-auto space-y-3 min-h-[180px] max-h-[320px] pr-1" style={{ scrollbarWidth: 'thin' }}>
+            {themeChatMessages.length === 0 && (
+              <div className="text-center py-8" style={{ color: COLORS.caramel, opacity: 0.6 }}>
+                <p className="text-sm italic">Start by saying what's on your mind...</p>
+                <p className="text-[10px] mt-2">"He's been obsessed with engines" or "something with welding?"</p>
+              </div>
+            )}
+            {themeChatMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className="rounded-2xl px-4 py-3 max-w-[85%] text-sm leading-relaxed"
+                  style={msg.role === 'user'
+                    ? { background: COLORS.green, color: COLORS.cream }
+                    : { background: 'rgba(81, 55, 33, 0.35)', color: COLORS.cream, border: '1px solid rgba(81, 55, 33, 0.45)' }
+                  }
+                >
+                  {msg.text.split('\n').map((line, j) => (
+                    <p key={j} className={j > 0 ? 'mt-2' : ''}>{line}</p>
+                  ))}
                 </div>
-              ))}
-              <div className="flex gap-3">
-                {weekDates.map((date, i) => (
+              </div>
+            ))}
+            {themeChatLoading && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl px-4 py-3 text-sm" style={{ background: 'rgba(81, 55, 33, 0.35)', color: COLORS.caramel }}>
+                  <span className="animate-pulse">Thinking...</span>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Chat input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={themeChatInput}
+              onChange={e => setThemeChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleThemeChatSend()}
+              placeholder="What's on your mind for this week?"
+              className="flex-1 px-4 py-3 rounded-full text-sm outline-none"
+              style={{ background: 'rgba(81, 55, 33, 0.25)', color: COLORS.cream, border: '1px solid rgba(81, 55, 33, 0.45)' }}
+            />
+            <button
+              onClick={handleThemeChatSend}
+              disabled={themeChatLoading || !themeChatInput.trim()}
+              className="px-5 py-3 rounded-full font-bold text-[9px] uppercase tracking-[0.3em] disabled:opacity-30 transition-all"
+              style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+            >
+              Send
+            </button>
+          </div>
+
+          {/* Save theme + clear chat */}
+          <div className="flex gap-2 pt-2" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.25)' }}>
+            {!showSaveTheme ? (
+              <>
+                <button
+                  onClick={() => setShowSaveTheme(true)}
+                  disabled={themeChatMessages.length === 0}
+                  className="flex-1 py-3 rounded-full font-bold text-[9px] uppercase tracking-[0.3em] disabled:opacity-30 transition-all"
+                  style={{ background: 'rgba(81, 55, 33, 0.35)', color: COLORS.caramel, border: '1px solid rgba(81, 55, 33, 0.45)' }}
+                >
+                  Save This Week's Theme
+                </button>
+                {themeChatMessages.length > 0 && (
                   <button
-                    key={date}
-                    onClick={() => deployTasks(date)}
-                    className="flex-1 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest transition-all hover:scale-105"
-                    style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+                    onClick={() => setThemeChatMessages([])}
+                    className="px-4 py-3 rounded-full font-bold text-[9px] uppercase tracking-[0.3em] transition-all"
+                    style={{ background: 'rgba(81, 55, 33, 0.2)', color: COLORS.caramel }}
                   >
-                    {DAYS[i].slice(0, 3)}
+                    Clear
                   </button>
+                )}
+              </>
+            ) : (
+              <div className="flex gap-2 w-full">
+                <input
+                  type="text"
+                  value={saveThemeInput}
+                  onChange={e => setSaveThemeInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveTheme()}
+                  placeholder="Theme name (e.g. Diesel Engines)"
+                  className="flex-1 px-4 py-3 rounded-full text-sm outline-none"
+                  style={{ background: 'rgba(81, 55, 33, 0.25)', color: COLORS.cream, border: '1px solid rgba(81, 55, 33, 0.45)' }}
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveTheme}
+                  disabled={!saveThemeInput.trim()}
+                  className="px-5 py-3 rounded-full font-bold text-[9px] uppercase tracking-[0.3em] disabled:opacity-30"
+                  style={{ backgroundColor: COLORS.green, color: COLORS.cream }}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => { setShowSaveTheme(false); setSaveThemeInput(''); }}
+                  className="px-4 py-3 rounded-full font-bold text-[9px] uppercase tracking-[0.3em]"
+                  style={{ background: 'rgba(81, 55, 33, 0.2)', color: COLORS.caramel }}
+                >
+                  X
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Previously used themes */}
+          {usedThemes.length > 0 && (
+            <div className="space-y-2 pt-2" style={{ borderTop: '1px solid rgba(81, 55, 33, 0.25)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>Past Themes</p>
+              <div className="flex flex-wrap gap-2">
+                {usedThemes.slice(-8).reverse().map((t, i) => (
+                  <span key={i} className="text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full" style={{ background: 'rgba(81, 55, 33, 0.42)', color: COLORS.caramel }}>
+                    {t}
+                  </span>
                 ))}
               </div>
             </div>
           )}
-        </div>
-
-        {/* Activity Feed */}
-        <div className="glass-tile-tinted rounded-[2.5rem] p-8 space-y-6">
-          <div className="flex items-center gap-3">
-            <div style={{ color: COLORS.green }}><Icons.Activity /></div>
-            <h3 className="text-xl font-serif" style={{ color: COLORS.cream }}>Activity Feed</h3>
-          </div>
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {activityFeed.length === 0 ? (
-              <p className="font-serif text-center py-8" style={{ color: COLORS.caramel }}>
-                No activity yet. Completed homework will show up here in real time.
-              </p>
-            ) : (
-              activityFeed.map((entry) => (
-                <div key={entry.id} className="p-4 rounded-xl space-y-1" style={{ background: 'rgba(81, 55, 33, 0.30)' }}>
-                  <div className="flex items-center justify-between">
-                    <p className="font-serif text-lg" style={{ color: COLORS.cream }}>{entry.taskName}</p>
-                    <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.caramel }}>
-                      {new Date(entry.completedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {entry.hasPhoto && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.green }}>📷 Photo</span>}
-                    {entry.hasVoiceNote && <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: COLORS.green }}>🎤 Voice</span>}
-                  </div>
-                  {entry.voiceSummary && (
-                    <p className="text-sm font-serif italic" style={{ color: COLORS.caramel }}>"{entry.voiceSummary}"</p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
         </div>
 
         {/* Learning Insight */}
