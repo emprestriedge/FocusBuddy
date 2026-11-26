@@ -1,10 +1,21 @@
 node_modules/
+dist/
 .netlify/
 .DS_Store
 .env
-.env.local
+.env.*
+!.env.example
 *.p8
 
-# built bundles excluded from public repo (baked-in API key)
+# Prompt/chat history — never commit these, they can contain API keys
+migrated_prompt_history/
+prompt_history/
+prompt_*.json
+*_prompt_history*
+chat_history/
+
+# Netlify deploy zips (contain built dist/ with baked-in keys)
 Deploy/
-dist/
+deploy-*.zip
+focusbuddy-deploy.zip
+ziUCby3p
